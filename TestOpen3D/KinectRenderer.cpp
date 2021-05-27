@@ -272,7 +272,6 @@ public:
             if (images[j] != NULL)
             {
                 uint64_t timestamp = k4a_image_get_device_timestamp_usec(images[j]);
-                //uint64_t timestamp = k4a_image_get_system_timestamp_nsec(images[j]);
                 printf("  %7ju usec", timestamp);
                 k4a_image_release(images[j]);
                 images[j] = NULL;
@@ -298,7 +297,6 @@ public:
             if (images[i] != NULL)
             {
                 uint64_t timestamp = k4a_image_get_device_timestamp_usec(images[i]);
-                //uint64_t timestamp = k4a_image_get_system_timestamp_nsec(images[i]);
                 if (timestamp < min_timestamp)
                 {
                     min_timestamp = timestamp;
