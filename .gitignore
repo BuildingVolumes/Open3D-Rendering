@@ -1,0 +1,6 @@
+*.mkv
+.vs/
+*.obj
+TestOpen3D/Kinect Test 1/
+*.ply
+x64/
