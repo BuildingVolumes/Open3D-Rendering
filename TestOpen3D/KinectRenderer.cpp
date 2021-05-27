@@ -117,12 +117,15 @@ public:
 
     Tensor _intrinsic_t;
     Tensor _extrinsic_t;
+    Matrix4d _extrinsic_m;
 
     k4a_playback_t handle;
 
     k4a_record_configuration_t record_config;
 
     std::string extrinsic_path;
+
+    float focalX = 0, focalY = 0, principleX = 0, principleY = 0;
 
     CameraDataMKV(std::string mkv_file) : mkv_name(mkv_file)
     {
@@ -220,6 +223,11 @@ public:
 
         auto params = _calib.color_camera_calibration.intrinsics.parameters.param;
 
+        focalX = params.fx;
+        focalY = params.fy;
+        principleX = params.cx;
+        principleY = params.cy;
+
         _intrinsic_t = Tensor::Init<double>({
             {params.fx, 0, params.cx},
             {0, params.fy, params.cy},
@@ -313,7 +321,23 @@ public:
 
     std::shared_ptr<open3d::geometry::RGBDImage> get_rgbd_frame()
     {
-        return AzureKinectSensor::DecompressCapture(*capture, _transform);
+        bool valid_frame = false;
+
+        std::shared_ptr<open3d::geometry::RGBDImage> rgbd;
+
+        while (!valid_frame)
+        {
+            rgbd = DecompressCapture(capture, _transform);
+
+            valid_frame = (rgbd != nullptr);
+
+            if (!valid_frame)
+            {
+                cycle_capture();
+            }
+        }
+
+        return rgbd;
     }
 
     void get_rgbd_frame(geometry::Image &_color_ref, geometry::Image &_depth_ref)
@@ -499,6 +523,46 @@ Tensor build_extrinsic_matrix_kinect(std::string extrinsic_path)
     return core::eigen_converter::EigenMatrixToTensor(final_mat);
 }
 
+Tensor build_extrinsic_matrix_kinect(std::string extrinsic_path, Matrix4d &to_write)
+{
+    std::string file_contents;
+    std::ifstream calib_file = std::ifstream(extrinsic_path);
+
+    while (!calib_file.eof())
+    {
+        std::string single_content = "";
+        std::getline(calib_file, single_content);
+        single_content += " ";
+
+        file_contents.append(single_content);
+    }
+
+    Vector3d translation;
+    Matrix3d r_mat_3 = Matrix3d::Identity();
+
+    std::vector<std::string> extrinsic_data;
+    split_string(file_contents, extrinsic_data, ' ');
+
+    for (int j = 0; j < 3; ++j)
+    {
+        translation[j] = std::stof(extrinsic_data[j]);
+    }
+
+    for (int j = 0; j < 9; ++j)
+    {
+        r_mat_3(j / 3, j % 3) = std::stof(extrinsic_data[j + 3]);
+    }
+
+    to_write = Matrix4d::Identity();
+
+    to_write.block<3, 3>(0, 0) = r_mat_3;
+    to_write.block<3, 1>(0, 3) = r_mat_3 * translation;
+
+    to_write = to_write.inverse();
+
+    return core::eigen_converter::EigenMatrixToTensor(to_write);
+}
+
 Tensor build_intrinsic_matrix_default()
 {
     camera::PinholeCameraIntrinsic intrinsic = camera::PinholeCameraIntrinsic(
@@ -558,6 +622,31 @@ t::geometry::TSDFVoxelGrid CreateVoxelGrid(core::Device& device, int blocks = 10
 
         voxel_size, sdf_trunc, 16, blocks, device
     );
+}
+
+pipelines::integration::ScalableTSDFVolume CreateTSDFVolume(double voxel_length, double signed_distance_field_truncation, pipelines::integration::TSDFVolumeColorType color_type, int volume_resolution = 16, int depth_stride = 4)
+{
+    return pipelines::integration::ScalableTSDFVolume(
+        voxel_length, signed_distance_field_truncation, color_type, volume_resolution, depth_stride
+    );
+}
+
+void read_frame_from_MKV(pipelines::integration::ScalableTSDFVolume& tsdf_volume, std::vector<CameraDataMKV*>& cam_data)
+{
+    for (auto cam : cam_data)
+    {
+        auto im = cam->get_rgbd_frame();
+
+        auto intrinsic = camera::PinholeCameraIntrinsic();
+        im->depth_ = *im->depth_.ConvertDepthToFloatImage();
+
+        auto width = im->color_.width_;
+        auto height = im->color_.height_;
+
+        intrinsic.SetIntrinsics(width, height, cam->focalX, cam->focalY, cam->principleX, cam->principleY);
+
+        tsdf_volume.Integrate(*im, intrinsic, cam->_extrinsic_m);
+    }
 }
 
 void read_frame_from_MKV(t::geometry::TSDFVoxelGrid& grid, core::Device& device, std::vector<CameraDataMKV*> &cam_data)
@@ -667,9 +756,6 @@ void create_kinect_mesh()
 
     std::string mesh_file_name = "kinect test 1 mesh.ply"; //Definitely need to change
 
-    //Grid to render a mesh
-    t::geometry::TSDFVoxelGrid voxel_grid = CreateVoxelGrid(device, gd.blocks, gd.voxel_size, gd.depth_scale, gd.depth_max, gd.signed_distance_field_truncation);
-
     //Folders to find information from
     std::vector<std::string> video_folders;
     video_folders.push_back("FramesCam0");
@@ -681,10 +767,8 @@ void create_kinect_mesh()
     //Vector of camera objects
     std::vector<CameraDataMKV*> camera_data;
 
-    int max_frames = 25;
-
     size_t highest_ms = 0; // we can control what microsecond to start the video at here
-    highest_ms = 11000000; //This would be 11 seconds in
+    highest_ms = 10900000; //This would be 11 seconds in
 
     //Set data for each camera
     for (int i = 0; i < video_folders.size(); ++i)
@@ -695,7 +779,7 @@ void create_kinect_mesh()
 
         cdm->extrinsic_path = main_image_directory + "/" + video_folders[i] + "/" + extrinsics_file_name;
 
-        cdm->_extrinsic_t = build_extrinsic_matrix_kinect(cdm->extrinsic_path);
+        cdm->_extrinsic_t = build_extrinsic_matrix_kinect(cdm->extrinsic_path, cdm->_extrinsic_m);
 
         //Depth information
         cdm->_depth_scale = gd.depth_scale;
@@ -719,8 +803,14 @@ void create_kinect_mesh()
         std::cout << "Found capture! " << cam->get_timestamp_cached() << std::endl;
     }
 
+    //Grid to render a mesh
+    t::geometry::TSDFVoxelGrid voxel_grid = CreateVoxelGrid(device, gd.blocks, gd.voxel_size, gd.depth_scale, gd.depth_max, gd.signed_distance_field_truncation);
+    //pipelines::integration::ScalableTSDFVolume tsdf_volume = CreateTSDFVolume(3.0 / 512.0, 0.04, pipelines::integration::TSDFVolumeColorType::RGB8, 16, 4);
+
     //Here we render a single frame
     read_frame_from_MKV(voxel_grid, device, camera_data);
+
+    //read_frame_from_MKV(tsdf_volume, camera_data);
     //bake_frame_into_separate_meshes_MKV(gd, device, camera_data, "Voxel Mesh", ".obj");
 
     //Construct a mesh from the data, print to a file
@@ -729,6 +819,8 @@ void create_kinect_mesh()
         mesh.ToLegacyTriangleMesh());
     open3d::io::WriteTriangleMesh(mesh_file_name,
         *mesh_legacy);
+
+    //auto mesh_legacy = tsdf_volume.ExtractTriangleMesh();
     
     //Allow us to view the mesh after creating
     std::vector<std::shared_ptr<const geometry::Geometry>> toDraw;
