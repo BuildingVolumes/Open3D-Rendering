@@ -35,6 +35,8 @@
 #include "open3d/geometry/RGBDImage.h"
 #include <turbojpeg.h>
 
+#include "ErrorLogger.h"
+
 using namespace open3d;
 using namespace open3d::core;
 using namespace open3d::io;
@@ -100,6 +102,7 @@ void ConvertBGRAToRGB(geometry::Image& bgra, geometry::Image& rgb) {
 
 class CameraDataMKV
 {
+public:
     CameraDataMKV* main_camera = nullptr;
 
     k4a_capture_t* capture = nullptr;
@@ -109,7 +112,6 @@ class CameraDataMKV
     k4a_calibration_t _calib;
     k4a_transformation_t _transform = NULL;
 
-public:
     std::string mkv_name;
 
     float _depth_scale = 0;
@@ -294,7 +296,7 @@ public:
 
     uint64_t first_capture_timestamp()
     {
-        uint64_t min_timestamp = (uint64_t)-1;
+        uint64_t min_timestamp = -1;
         k4a_image_t images[3];
         images[0] = k4a_capture_get_color_image(*capture);
         images[1] = k4a_capture_get_depth_image(*capture);
@@ -674,6 +676,40 @@ void read_frame_from_MKV(t::geometry::TSDFVoxelGrid& grid, core::Device& device,
     }
 }
 
+void read_frame_from_MKV_and_draw(std::vector<CameraDataMKV*>& cam_data, Vector3d origin, Vector3d color, double voxel_size, Vector3d xyz_dimensions, bool keep_voxels_outside_image)
+{
+    geometry::VoxelGrid grid;
+
+    std::cout << "Creating grid at " << origin << " with voxel size " << voxel_size << " and dimensions " << xyz_dimensions << std::endl;
+
+    grid.CreateDense(origin, color, voxel_size, xyz_dimensions[0], xyz_dimensions[1], xyz_dimensions[2]);
+
+    for (auto cam : cam_data)
+    {
+        std::cout << "Rendering frame from " << cam->mkv_name << "..." << std::endl;
+        auto im = cam->get_rgbd_frame();
+        auto width = im->depth_.width_;
+        auto height = im->depth_.height_;
+
+        auto intrinsic = camera::PinholeCameraIntrinsic();
+        intrinsic.SetIntrinsics(width, height, cam->focalX, cam->focalY, cam->principleX, cam->principleY);
+
+        auto pinholeParams = camera::PinholeCameraParameters();
+        pinholeParams.extrinsic_ = cam->_extrinsic_m;
+        pinholeParams.intrinsic_ = intrinsic;
+
+        grid.CarveDepthMap(im->depth_, pinholeParams, keep_voxels_outside_image);
+    }
+
+    auto grid_ptr = std::make_shared<geometry::VoxelGrid>(
+        grid);
+
+    std::vector<std::shared_ptr<const geometry::Geometry>> toDraw;
+    toDraw.push_back(grid_ptr);
+
+    visualization::DrawGeometries(toDraw);
+}
+
 void read_frame_from_MKV_and_draw(GridData &gd, core::Device& device, std::vector<CameraDataMKV*>& cam_data)
 {
     t::geometry::TSDFVoxelGrid grid = CreateVoxelGrid(device, gd.blocks, gd.voxel_size, gd.depth_scale, gd.depth_max, gd.signed_distance_field_truncation);
@@ -809,6 +845,7 @@ void create_kinect_mesh()
 
     //Here we render a single frame
     read_frame_from_MKV(voxel_grid, device, camera_data);
+    //read_frame_from_MKV_and_draw(camera_data, Vector3d(0, 0, 0), Vector3d(1, 0, 0), gd.voxel_size, 200.0 * gd.voxel_size * Vector3d(1, 1, 1), true);
 
     //read_frame_from_MKV(tsdf_volume, camera_data);
     //bake_frame_into_separate_meshes_MKV(gd, device, camera_data, "Voxel Mesh", ".obj");
@@ -836,8 +873,8 @@ void create_kinect_mesh()
     }
 }
 
-int main() {
-    create_kinect_mesh();
-
-    return 0;
-}
+//int main() {
+//    //create_kinect_mesh();
+//
+//    return 0;
+//}
