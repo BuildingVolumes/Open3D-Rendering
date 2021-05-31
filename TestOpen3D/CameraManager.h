@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MKV_Data.h"
+#include "Abstract_Data.h"
+
 #include "VoxelGridData.h"
 
 #include <vector>
@@ -8,7 +9,7 @@
 
 namespace MKV_Rendering {
 	class CameraManager {
-		std::vector<MKV_Data*> mkv_data;
+		std::vector<Abstract_Data*> camera_data;
 
 		void CauseError(bool cause_abort);
 	public:

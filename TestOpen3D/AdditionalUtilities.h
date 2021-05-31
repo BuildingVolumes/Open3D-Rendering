@@ -31,3 +31,12 @@ inline std::vector<std::string> GetDirectories(const std::string& s)
             r.push_back(p.path().string());
     return r;
 }
+
+inline std::vector<std::string> GetFiles(const std::string& s)
+{
+    std::vector<std::string> r;
+    for (auto& p : std::filesystem::directory_iterator(s))
+        if (p.is_regular_file())
+            r.push_back(p.path().string());
+    return r;
+}

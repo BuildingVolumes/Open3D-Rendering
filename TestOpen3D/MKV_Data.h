@@ -1,21 +1,19 @@
 #pragma once
 
 #include "open3d/Open3D.h"
+#include "Abstract_Data.h"
 
 #include <k4a/k4a.h>
 #include <k4arecord/record.h>
 #include <string>
 
 namespace MKV_Rendering {
-	class MKV_Data
+	class MKV_Data : public Abstract_Data
 	{
 		static MKV_Data* main_camera_data;
 
 		std::string mkv_file;
 		std::string calibration_file;
-
-		open3d::core::Tensor intrinsic_t;
-		open3d::core::Tensor extrinsic_t;
 
 		k4a_playback_t handle;
 		k4a_calibration_t calibration;
@@ -34,7 +32,7 @@ namespace MKV_Rendering {
 		std::shared_ptr<open3d::geometry::RGBDImage> DecompressCapture();
 
 	public:
-		MKV_Data(std::string mkv_file, std::string calibration_file);
+		MKV_Data(std::string my_folder);
 		~MKV_Data();
 
 		uint64_t GetCaptureTimestamp();
@@ -42,10 +40,8 @@ namespace MKV_Rendering {
 		void CycleCaptureBackwards();
 		void SeekToTime(uint64_t time);
 
-		open3d::core::Tensor GetIntrinsic();
-		open3d::core::Tensor GetExtrinsic();
-
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
-		uint64_t GetTimestampCached() { return _timestamp; }
+
+		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
 	};
 }

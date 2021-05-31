@@ -169,16 +169,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Abstract_Data.cpp" />
     <ClCompile Include="CameraManager.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
+    <ClCompile Include="Image_Data.cpp" />
     <ClCompile Include="KinectRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MKV_Data.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Abstract_Data.h" />
     <ClInclude Include="AdditionalUtilities.h" />
     <ClInclude Include="CameraManager.h" />
     <ClInclude Include="ErrorLogger.h" />
+    <ClInclude Include="Image_Data.h" />
     <ClInclude Include="MKV_Data.h" />
     <ClInclude Include="VoxelGridData.h" />
   </ItemGroup>

@@ -133,9 +133,9 @@ void MKV_Data::GetExtrinsicTensor()
     final_mat.block<3, 3>(0, 0) = r_mat_3;
     final_mat.block<3, 1>(0, 3) = r_mat_3 * translation;
 
-    final_mat = final_mat.inverse();
+    Eigen::Matrix4d final_mat2 = final_mat.inverse();
 
-    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(final_mat);
+    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(final_mat2);
 }
 
 void MKV_Data::ConvertBGRAToRGB(open3d::geometry::Image& bgra, open3d::geometry::Image& rgb)
@@ -259,10 +259,40 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     return rgbd_buffer;
 }
 
-MKV_Data::MKV_Data(std::string mkv_file, std::string calibration_file)
+MKV_Data::MKV_Data(std::string my_folder) : Abstract_Data(my_folder)
 {
-    this->mkv_file = mkv_file;
-    this->calibration_file = calibration_file;
+    mkv_file = "";
+    calibration_file = "";
+
+    std::vector<std::string> files;
+    open3d::utility::filesystem::ListFilesInDirectory(my_folder, files);
+
+    for (auto _file : files)
+    {
+        std::vector<std::string> filename_and_extension;
+
+        SplitString(_file, filename_and_extension, '.');
+
+        if (filename_and_extension.back() == "mkv")
+        {
+            if (mkv_file == "")
+                mkv_file = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple MKVs in the same folder, " + my_folder + "!");
+        }
+        else if (filename_and_extension.back() == "log")
+        {
+            if (calibration_file == "")
+                calibration_file  = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple calibration files in the same folder, " + my_folder + "!");
+        }
+    }
+
+    if (mkv_file == "")
+        ErrorLogger::LOG_ERROR("No MKV present!");
+    if (calibration_file == "")
+        ErrorLogger::LOG_ERROR("No calibration present!");
 
     ErrorLogger::EXECUTE("Calibrate Camera", this, &MKV_Data::Calibrate);
 
@@ -405,16 +435,6 @@ void MKV_Data::SeekToTime(uint64_t time)
     }
 }
 
-open3d::core::Tensor MKV_Rendering::MKV_Data::GetIntrinsic()
-{
-    return intrinsic_t;
-}
-
-open3d::core::Tensor MKV_Rendering::MKV_Data::GetExtrinsic()
-{
-    return extrinsic_t;
-}
-
 std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::GetFrameRGBD()
 {
     bool valid_frame = false;
@@ -434,4 +454,19 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::GetFrameRGBD()
     }
 
     return rgbd;
+}
+
+void MKV_Rendering::MKV_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
+{
+    auto rgbd = GetFrameRGBD();
+
+    auto color = open3d::t::geometry::Image::FromLegacyImage(rgbd->color_);
+    auto depth = open3d::t::geometry::Image::FromLegacyImage(rgbd->depth_);
+
+    color.To(grid->GetDevice());
+    depth.To(grid->GetDevice());
+
+    grid->Integrate(depth, color,
+        intrinsic_t, extrinsic_t,
+        data->depth_scale, data->depth_max);
 }
