@@ -23,6 +23,7 @@ namespace MKV_Rendering {
 
 		uint64_t _timestamp = 0;
 
+		void Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name);
 		void Calibrate();
 		void GetPlaybackDataRaw();
 		void GetIntrinsicTensor();
@@ -32,7 +33,7 @@ namespace MKV_Rendering {
 		std::shared_ptr<open3d::geometry::RGBDImage> DecompressCapture();
 
 	public:
-		MKV_Data(std::string my_folder);
+		MKV_Data(std::string my_folder, std::string preferred_mkv_name, std::string preferred_calibration_name);
 		~MKV_Data();
 
 		uint64_t GetCaptureTimestamp();

@@ -12,6 +12,49 @@ using namespace MKV_Rendering;
 
 MKV_Data* MKV_Data::main_camera_data = nullptr;
 
+void MKV_Rendering::MKV_Data::Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name)
+{
+    if (mkv_name != "")
+        mkv_file = my_folder + "/" + mkv_name + ".mkv";
+    else
+        mkv_file = "";
+
+    if (calibration_name != "")
+        calibration_file = my_folder + "/" + calibration_name + ".log";
+    else
+        calibration_file = "";
+
+    std::vector<std::string> files;
+    open3d::utility::filesystem::ListFilesInDirectory(my_folder, files);
+
+    for (auto _file : files)
+    {
+        std::vector<std::string> filename_and_extension;
+
+        SplitString(_file, filename_and_extension, '.');
+
+        if (filename_and_extension.back() == "mkv" && mkv_name == "")
+        {
+            if (mkv_file == "")
+                mkv_file = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple MKVs in the same folder, " + my_folder + "!");
+        }
+        else if (filename_and_extension.back() == "log" && calibration_name == "")
+        {
+            if (calibration_file == "")
+                calibration_file = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple calibration files in the same folder, " + my_folder + "!");
+        }
+    }
+
+    if (mkv_file == "")
+        ErrorLogger::LOG_ERROR("No MKV present!", true);
+    if (calibration_file == "")
+        ErrorLogger::LOG_ERROR("No calibration present!", true);
+}
+
 void MKV_Data::Calibrate()
 {
     if (k4a_result_t::K4A_RESULT_SUCCEEDED !=
@@ -259,40 +302,9 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     return rgbd_buffer;
 }
 
-MKV_Data::MKV_Data(std::string my_folder) : Abstract_Data(my_folder)
+MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string calibration_name) : Abstract_Data(my_folder)
 {
-    mkv_file = "";
-    calibration_file = "";
-
-    std::vector<std::string> files;
-    open3d::utility::filesystem::ListFilesInDirectory(my_folder, files);
-
-    for (auto _file : files)
-    {
-        std::vector<std::string> filename_and_extension;
-
-        SplitString(_file, filename_and_extension, '.');
-
-        if (filename_and_extension.back() == "mkv")
-        {
-            if (mkv_file == "")
-                mkv_file = _file;
-            else
-                ErrorLogger::LOG_ERROR("Multiple MKVs in the same folder, " + my_folder + "!");
-        }
-        else if (filename_and_extension.back() == "log")
-        {
-            if (calibration_file == "")
-                calibration_file  = _file;
-            else
-                ErrorLogger::LOG_ERROR("Multiple calibration files in the same folder, " + my_folder + "!");
-        }
-    }
-
-    if (mkv_file == "")
-        ErrorLogger::LOG_ERROR("No MKV present!");
-    if (calibration_file == "")
-        ErrorLogger::LOG_ERROR("No calibration present!");
+    ErrorLogger::EXECUTE("Initialization", this, &MKV_Data::Initialize, my_folder, mkv_name, calibration_name);
 
     ErrorLogger::EXECUTE("Calibrate Camera", this, &MKV_Data::Calibrate);
 

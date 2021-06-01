@@ -5,6 +5,8 @@
 #include "MKV_Data.h"
 #include "Image_Data.h"
 
+#include <fstream>
+
 using namespace MKV_Rendering;
 
 void MKV_Rendering::CameraManager::CauseError(bool cause_abort)
@@ -17,20 +19,79 @@ void MKV_Rendering::CameraManager::CauseError(bool cause_abort)
 	}
 }
 
-CameraManager::CameraManager(std::string root_folder)
+void MKV_Rendering::CameraManager::LoadStructure(std::string structure_path, std::map<std::string, std::string> *data)
+{
+	std::fstream structure_file;
+	std::vector<std::string> lines;
+	std::string parser;
+
+	structure_file.open(structure_path);
+
+	if (!structure_file.is_open())
+	{
+		ErrorLogger::LOG_ERROR("No suitable structure file found at " + structure_path + "!", true);
+	}
+
+	while (std::getline(structure_file, parser))
+	{
+		lines.push_back(parser);
+
+		parser = "";
+	}
+
+	for (auto line : lines)
+	{
+		std::vector<std::string> name_and_value;
+		SplitString(line, name_and_value, ' ');
+		(*data)[name_and_value[0]] = name_and_value[1];
+	}
+
+	structure_file.close();
+}
+
+CameraManager::CameraManager(std::string root_folder, std::string structure_file_name)
 {
 	std::vector<std::string> all_folders = GetDirectories(root_folder);
 	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
 
+	std::fstream structure_file;
+	std::vector<std::string> lines;
+
+	std::map<std::string, std::string> camera_structure;
+	std::string parser;
+
 	for (auto _folder : all_folders)
 	{
-		camera_data.push_back(new MKV_Data(_folder));
+		std::string structure_path = _folder + "/" + structure_file_name;
+
+		ErrorLogger::EXECUTE("Load File Structure", this, &CameraManager::LoadStructure, structure_path, &camera_structure);
+
+		std::cout << "Camera specifics at " << _folder << ": " << std::endl;
+		for (auto _pair : camera_structure)
+		{
+			std::cout << "\t" << _pair.first << ": '" << _pair.second <<  "'" << std::endl;
+		}
+
+		std::string c_type = camera_structure["Type"];
+
+		if (c_type == "mkv")
+		{
+			camera_data.push_back(new MKV_Data(_folder, camera_structure["MKV_File"], camera_structure["Calibration_File"]));
+		}
+		else
+		{
+			ErrorLogger::LOG_ERROR("Unrecognized file format, " + c_type + "!");
+		}
+
+		camera_structure.clear();
+
+		std::cout << "Finished initializing camera!\n" << std::endl;
 	}
 
 	if (camera_data.size() == 0)
 	{
 		ErrorLogger::LOG_ERROR(
-			"No mkv files present!", true
+			"No data files present!", true
 		);
 	}
 }

@@ -6,14 +6,17 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 namespace MKV_Rendering {
 	class CameraManager {
 		std::vector<Abstract_Data*> camera_data;
 
 		void CauseError(bool cause_abort);
+
+		void LoadStructure(std::string structure_path, std::map<std::string, std::string> *data);
 	public:
-		CameraManager(std::string root_folder);
+		CameraManager(std::string root_folder, std::string structure_file_name);
 
 		~CameraManager();
 

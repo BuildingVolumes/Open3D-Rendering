@@ -27,7 +27,7 @@ namespace MKV_Rendering {
 		k4a_calibration_t calibration;
 
 		double FPS;
-		size_t currentFrame = 0;
+		size_t current_frame = 0;
 	public:
 		Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, double FPS);
 		~Image_Data();

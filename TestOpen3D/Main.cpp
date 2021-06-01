@@ -1,6 +1,7 @@
 #include "CameraManager.h"
 #include "ErrorLogger.h"
 #include "VoxelGridData.h"
+#include "AdditionalUtilities.h"
 
 #include "open3d/io/sensor/azure_kinect/K4aPlugin.h"
 #include "open3d/Open3D.h"
@@ -67,8 +68,9 @@ namespace MKV_Rendering {
     void refactored_code_test()
     {
         std::string root_folder = "Kinect Test 1";
+        std::string structure_file_name = ".structure";
 
-        CameraManager cm(root_folder);
+        CameraManager cm(root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
