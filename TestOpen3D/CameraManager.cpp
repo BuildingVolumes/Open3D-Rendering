@@ -21,7 +21,6 @@ CameraManager::CameraManager(std::string root_folder)
 {
 	std::vector<std::string> all_folders = GetDirectories(root_folder);
 	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
-
 	for (auto _folder : all_folders)
 	{
 		camera_data.push_back(new MKV_Data(_folder));
