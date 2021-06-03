@@ -34,9 +34,12 @@ void MKV_Rendering::CameraManager::LoadStructure(std::string structure_path, std
 
 	while (std::getline(structure_file, parser))
 	{
-		lines.push_back(parser);
+		if (parser != "")
+		{
+			lines.push_back(parser);
 
-		parser = "";
+			parser = "";
+		}
 	}
 
 	for (auto line : lines)
@@ -76,7 +79,22 @@ CameraManager::CameraManager(std::string root_folder, std::string structure_file
 
 		if (c_type == "mkv")
 		{
-			camera_data.push_back(new MKV_Data(_folder, camera_structure["MKV_File"], camera_structure["Calibration_File"]));
+			camera_data.push_back(new MKV_Data(
+				_folder, 
+				camera_structure["MKV_File"], 
+				camera_structure["Calibration_File"]
+			));
+		}
+		else if (c_type == "image")
+		{
+			camera_data.push_back(new Image_Data(
+				_folder, 
+				camera_structure["Color"], 
+				camera_structure["Depth"], 
+				camera_structure["Intrinsics_Json"],
+				camera_structure["Calibration_File"],
+				std::stod(camera_structure["FPS"])
+			));
 		}
 		else
 		{

@@ -24,9 +24,9 @@ namespace MKV_Rendering {
 		Abstract_Data(std::string my_folder);
 
 		virtual uint64_t GetCaptureTimestamp() = 0;
-		virtual void CycleCaptureForwards() = 0;
-		virtual void CycleCaptureBackwards() = 0;
-		virtual void SeekToTime(uint64_t time) = 0;
+		virtual bool CycleCaptureForwards() = 0;
+		virtual bool CycleCaptureBackwards() = 0;
+		virtual bool SeekToTime(uint64_t time) = 0;
 
 		virtual void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data) = 0;
 

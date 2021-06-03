@@ -1,0 +1,7 @@
+Version 0
+Type image
+Color COLOR
+Depth DEPTH
+Intrinsics_Json intrinsic
+Calibration_File calib
+FPS 30

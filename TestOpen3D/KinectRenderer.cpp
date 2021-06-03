@@ -36,6 +36,7 @@
 #include <turbojpeg.h>
 
 #include "ErrorLogger.h"
+#include "AdditionalUtilities.h"
 
 using namespace open3d;
 using namespace open3d::core;
@@ -50,12 +51,6 @@ struct GridData
     float depth_max = 3.f; //May need to change
     float signed_distance_field_truncation = 0.04f; //May need to change
 };
-
-void Dbg(std::string msg)
-{
-    std::cout << msg << std::endl;
-    system("pause");
-}
 
 size_t get_file_length(std::ifstream &filestream)
 {
