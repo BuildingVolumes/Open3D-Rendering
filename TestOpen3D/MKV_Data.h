@@ -21,8 +21,11 @@ namespace MKV_Rendering {
 		k4a_transformation_t transform = NULL;
 		k4a_capture_t* capture = nullptr;
 
+		std::vector<uint8_t> playback_data;
+
 		uint64_t _timestamp = 0;
 
+		void Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name);
 		void Calibrate();
 		void GetPlaybackDataRaw();
 		void GetIntrinsicTensor();
@@ -32,16 +35,18 @@ namespace MKV_Rendering {
 		std::shared_ptr<open3d::geometry::RGBDImage> DecompressCapture();
 
 	public:
-		MKV_Data(std::string my_folder);
+		MKV_Data(std::string my_folder, std::string preferred_mkv_name, std::string preferred_calibration_name);
 		~MKV_Data();
 
 		uint64_t GetCaptureTimestamp();
-		void CycleCaptureForwards();
-		void CycleCaptureBackwards();
-		void SeekToTime(uint64_t time);
+		bool CycleCaptureForwards();
+		bool CycleCaptureBackwards();
+		bool SeekToTime(uint64_t time);
 
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
+		void WriteIntrinsics(std::string filename);
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
 	};
 }
+

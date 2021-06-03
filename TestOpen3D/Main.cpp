@@ -1,6 +1,9 @@
 #include "CameraManager.h"
+#include "MKV_Data.h"
+#include "Image_Data.h"
 #include "ErrorLogger.h"
 #include "VoxelGridData.h"
+#include "AdditionalUtilities.h"
 
 #include "open3d/io/sensor/azure_kinect/K4aPlugin.h"
 #include "open3d/Open3D.h"
@@ -122,15 +125,95 @@ namespace MKV_Rendering {
     }
 
 
+    //Currently skipping frames for some reason
+    void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
+    {
+        bool next_capture = true;
+
+        int iter = 0;
+
+        while (next_capture && iter < max_output_images)
+        {
+            auto rgbd_image = data->GetFrameRGBD();
+
+            std::string num = GetNumberFixedLength(iter, 8);
+
+            std::filesystem::create_directories(color_destination_folder);
+            std::filesystem::create_directories(depth_destination_folder);
+
+            open3d::io::WriteImageToPNG(color_destination_folder + "/color" + num + ".png", rgbd_image->color_);
+            open3d::io::WriteImageToPNG(depth_destination_folder + "/depth" + num + ".png", rgbd_image->depth_);
+
+            next_capture = data->CycleCaptureForwards();
+
+            ++iter;
+        }
+    }
+
+    void SaveJSON(MKV_Data* data, std::string json_destination_folder_and_path)
+    {
+        data->WriteIntrinsics(json_destination_folder_and_path);
+    }
+
+    void CopyCalibration(std::string calibration_filename, std::string source_folder, std::string destination_folder)
+    {
+        std::filesystem::copy_file(source_folder + "/" + calibration_filename + ".log", destination_folder + "/" + calibration_filename + ".log", std::filesystem::copy_options::overwrite_existing);
+    }
+
+    void SaveMKVDataForImages(int max_output, std::string mkv_folder_path, std::string image_folder_path, 
+        std::string intrinsics_filename, std::string calibration_filename, std::string color_folder_name, std::string depth_folder_name, double FPS)
+    {
+        auto directories = GetDirectories(mkv_folder_path);
+
+        int iter = 0;
+
+        for (auto dir : directories)
+        {
+            MKV_Data data(dir, "", "");
+
+            std::string new_dir = image_folder_path + "/FramesCam" + GetNumberFixedLength(iter, 8);
+
+            CreateImageArrayFromMKV(&data, new_dir + "/" + color_folder_name, new_dir + "/" + depth_folder_name, max_output);
+            SaveJSON(&data, new_dir + "/" + intrinsics_filename);
+            CopyCalibration(calibration_filename, dir, new_dir);
+
+            std::ofstream structure_file;
+            structure_file.open(new_dir + "/.structure");
+
+            structure_file << "Version 0" << std::endl;
+            structure_file << "Type image" << std::endl;
+            structure_file << "Color " << color_folder_name << std::endl;
+            structure_file << "Depth " << depth_folder_name << std::endl;
+            structure_file << "Intrinsics_Json " << intrinsics_filename << std::endl;
+            structure_file << "Calibration_File " << calibration_filename << std::endl;
+            structure_file << "FPS " << std::to_string(FPS) << std::endl;
+
+            ++iter;
+        }
+    }
+
     void refactored_code_test()
     {
-        std::string root_folder = "Kinect Test 1";
+        std::string mkv_root_folder = "Kinect Test 1";
+        std::string images_root_folder = "Kinect Test 2";
+        std::string structure_file_name = ".structure";
 
-        CameraManager cm(root_folder);
+        double FPS = 30;
+
+        //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
+        //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
+        //
+        //return;
+
+        //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
+        //Also the extrinsics are broken in it
+
+        //CameraManager cm(mkv_root_folder, structure_file_name);
+        CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 2000000;// 10900000; //Approximately 11 seconds in
 
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp

@@ -17,7 +17,6 @@ namespace MKV_Rendering {
 		std::vector<std::string> color_files;
 		std::vector<std::string> depth_files;
 
-		std::string root_folder;
 		std::string color_folder;
 		std::string depth_folder;
 		std::string calibration_file;
@@ -25,17 +24,25 @@ namespace MKV_Rendering {
 
 		k4a_playback_t handle;
 		k4a_calibration_t calibration;
+		k4a_transformation_t transform = NULL;
 
 		double FPS;
-		size_t currentFrame = 0;
+		size_t current_frame = 0;
+
+		void LoadImages();
+
+		void GetIntrinsicTensor();
+		void GetExtrinsicTensor();
+
+		open3d::geometry::Image TransformDepth(open3d::geometry::Image* old_depth, open3d::geometry::Image* color);
 	public:
-		Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, double FPS);
+		Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, std::string intrinsics, std::string extrinsics, double FPS);
 		~Image_Data();
 
 		uint64_t GetCaptureTimestamp();
-		void CycleCaptureForwards();
-		void CycleCaptureBackwards();
-		void SeekToTime(uint64_t time);
+		bool CycleCaptureForwards();
+		bool CycleCaptureBackwards();
+		bool SeekToTime(uint64_t time);
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
 	};

@@ -12,6 +12,48 @@ using namespace MKV_Rendering;
 
 MKV_Data* MKV_Data::main_camera_data = nullptr;
 
+void MKV_Rendering::MKV_Data::Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name)
+{
+    if (mkv_name != "")
+        mkv_file = my_folder + "/" + mkv_name + ".mkv";
+    else
+        mkv_file = "";
+
+    if (calibration_name != "")
+        calibration_file = my_folder + "/" + calibration_name + ".log";
+    else
+        calibration_file = "";
+
+    std::vector<std::string> files;
+    open3d::utility::filesystem::ListFilesInDirectory(my_folder, files);
+
+    for (auto _file : files)
+    {
+        std::vector<std::string> filename_and_extension;
+
+        SplitString(_file, filename_and_extension, '.');
+
+        if (filename_and_extension.back() == "mkv" && mkv_name == "")
+        {
+            if (mkv_file == "")
+                mkv_file = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple MKVs in the same folder, " + my_folder + "!");
+        }
+        else if (filename_and_extension.back() == "log" && calibration_name == "")
+        {
+            if (calibration_file == "")
+                calibration_file = _file;
+            else
+                ErrorLogger::LOG_ERROR("Multiple calibration files in the same folder, " + my_folder + "!");
+        }
+    }
+
+    if (mkv_file == "")
+        ErrorLogger::LOG_ERROR("No MKV present!", true);
+
+}
+
 void MKV_Data::Calibrate()
 {
     if (k4a_result_t::K4A_RESULT_SUCCEEDED !=
@@ -49,7 +91,10 @@ void MKV_Data::Calibrate()
 
 void MKV_Data::GetPlaybackDataRaw()
 {
-    std::vector<uint8_t> playback_data;
+    if (!playback_data.empty())
+    {
+        playback_data.clear();
+    }
 
     size_t data_len = 0;
 
@@ -100,6 +145,13 @@ void MKV_Data::GetIntrinsicTensor()
 
 void MKV_Data::GetExtrinsicTensor()
 {
+    if (calibration_file == "")
+    {
+        Eigen::Matrix4d matId = Eigen::Matrix4d::Identity();
+        extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(matId);
+        return;
+    }
+
     std::string file_contents = "";
     std::ifstream calib_file = std::ifstream(calibration_file);
 
@@ -259,40 +311,9 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     return rgbd_buffer;
 }
 
-MKV_Data::MKV_Data(std::string my_folder) : Abstract_Data(my_folder)
+MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string calibration_name) : Abstract_Data(my_folder)
 {
-    mkv_file = "";
-    calibration_file = "";
-
-    std::vector<std::string> files;
-    open3d::utility::filesystem::ListFilesInDirectory(my_folder, files);
-
-    for (auto _file : files)
-    {
-        std::vector<std::string> filename_and_extension;
-
-        SplitString(_file, filename_and_extension, '.');
-
-        if (filename_and_extension.back() == "mkv")
-        {
-            if (mkv_file == "")
-                mkv_file = _file;
-            else
-                ErrorLogger::LOG_ERROR("Multiple MKVs in the same folder, " + my_folder + "!");
-        }
-        else if (filename_and_extension.back() == "log")
-        {
-            if (calibration_file == "")
-                calibration_file  = _file;
-            else
-                ErrorLogger::LOG_ERROR("Multiple calibration files in the same folder, " + my_folder + "!");
-        }
-    }
-
-    if (mkv_file == "")
-        ErrorLogger::LOG_ERROR("No MKV present!");
-    if (calibration_file == "")
-        ErrorLogger::LOG_ERROR("No calibration present!");
+    ErrorLogger::EXECUTE("Initialization", this, &MKV_Data::Initialize, my_folder, mkv_name, calibration_name);
 
     ErrorLogger::EXECUTE("Calibrate Camera", this, &MKV_Data::Calibrate);
 
@@ -303,7 +324,7 @@ MKV_Data::MKV_Data(std::string my_folder) : Abstract_Data(my_folder)
 
     transform = k4a_transformation_create(&calibration);
 
-    ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &MKV_Data::CycleCaptureForwards);
+    ErrorLogger::EXECUTE("Set Capture To First Frame", this, &MKV_Data::CycleCaptureForwards);
 }
 
 MKV_Data::~MKV_Data()
@@ -348,7 +369,7 @@ uint64_t MKV_Data::GetCaptureTimestamp()
     return min_timestamp;
 }
 
-void MKV_Data::CycleCaptureForwards()
+bool MKV_Data::CycleCaptureForwards()
 {
     if (capture == nullptr)
     {
@@ -364,18 +385,22 @@ void MKV_Data::CycleCaptureForwards()
     switch (k4a_playback_get_next_capture(handle, capture))
     {
     case k4a_stream_result_t::K4A_STREAM_RESULT_EOF:
-        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file);
+        return false;
         break;
     case k4a_stream_result_t::K4A_STREAM_RESULT_FAILED:
         ErrorLogger::LOG_ERROR("Stream failed on: " + mkv_file, true);
+        return false;
         break;
     default:
         _timestamp = ErrorLogger::EXECUTE("Retrieving Capture Timestamp", this, &MKV_Data::GetCaptureTimestamp);
         break;
     }
+
+    return true;
 }
 
-void MKV_Data::CycleCaptureBackwards()
+bool MKV_Data::CycleCaptureBackwards()
 {
     if (capture == nullptr)
     {
@@ -391,18 +416,22 @@ void MKV_Data::CycleCaptureBackwards()
     switch (k4a_playback_get_previous_capture(handle, capture))
     {
     case k4a_stream_result_t::K4A_STREAM_RESULT_EOF:
-        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file);
+        return false;
         break;
     case k4a_stream_result_t::K4A_STREAM_RESULT_FAILED:
-        ErrorLogger::LOG_ERROR("Stream failed on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Stream failed on: " + mkv_file);
+        return false;
         break;
     default:
         _timestamp = ErrorLogger::EXECUTE("Retrieving Capture Timestamp", this, &MKV_Data::GetCaptureTimestamp);
         break;
     }
+
+    return true;
 }
 
-void MKV_Data::SeekToTime(uint64_t time)
+bool MKV_Data::SeekToTime(uint64_t time)
 {
     if (capture == nullptr)
     {
@@ -418,21 +447,26 @@ void MKV_Data::SeekToTime(uint64_t time)
     if (k4a_result_t::K4A_RESULT_SUCCEEDED !=
         k4a_playback_seek_timestamp(handle, time, k4a_playback_seek_origin_t::K4A_PLAYBACK_SEEK_BEGIN))
     {
-        ErrorLogger::LOG_ERROR("Problem seeking timestamp on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Problem seeking timestamp on: " + mkv_file);
+        return false;
     }
 
     switch (k4a_playback_get_next_capture(handle, capture))
     {
     case k4a_stream_result_t::K4A_STREAM_RESULT_EOF:
-        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Stream has reached EOF on: " + mkv_file);
+        return false;
         break;
     case k4a_stream_result_t::K4A_STREAM_RESULT_FAILED:
-        ErrorLogger::LOG_ERROR("Stream failed on: " + mkv_file, true);
+        ErrorLogger::LOG_ERROR("Stream failed on: " + mkv_file);
+        return false;
         break;
     default:
         _timestamp = ErrorLogger::EXECUTE("Retrieving Capture Timestamp", this, &MKV_Data::GetCaptureTimestamp);
         break;
     }
+
+    return true;
 }
 
 std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::GetFrameRGBD()
@@ -456,8 +490,18 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::GetFrameRGBD()
     return rgbd;
 }
 
+void MKV_Rendering::MKV_Data::WriteIntrinsics(std::string filename_and_path)
+{
+    std::ofstream file(filename_and_path + ".json", std::ofstream::binary);
+    file.write(reinterpret_cast<const char*>(&playback_data[0]), playback_data.size());
+    file.close();
+}
+
 void MKV_Rendering::MKV_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
 {
+    if (calibration_file == "")
+        ErrorLogger::LOG_ERROR("No calibration present on " + folder_name + "!", true);
+
     auto rgbd = GetFrameRGBD();
 
     auto color = open3d::t::geometry::Image::FromLegacyImage(rgbd->color_);

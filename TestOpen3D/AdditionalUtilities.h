@@ -40,3 +40,19 @@ inline std::vector<std::string> GetFiles(const std::string& s)
             r.push_back(p.path().string());
     return r;
 }
+
+inline void Dbg(std::string msg)
+{
+    std::cout << msg << std::endl;
+    system("pause");
+}
+
+inline std::string GetNumberFixedLength(int num, int length)
+{
+    std::string to_return;
+    std::string iter_num = std::to_string(num);
+    to_return.resize(length - iter_num.size(), '0');
+    to_return.append(iter_num);
+
+    return to_return;
+}
