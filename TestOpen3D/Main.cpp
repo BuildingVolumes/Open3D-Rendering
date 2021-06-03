@@ -150,12 +150,12 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-        CameraManager cm(mkv_root_folder, structure_file_name);
-        //CameraManager cm(images_root_folder, structure_file_name);
+        //CameraManager cm(mkv_root_folder, structure_file_name);
+        CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 2000000;// 10900000; //Approximately 11 seconds in
 
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp

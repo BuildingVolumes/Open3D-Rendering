@@ -202,7 +202,7 @@ bool MKV_Rendering::Image_Data::CycleCaptureBackwards()
 {
     --current_frame;
 
-    if (current_frame < color_files.size())
+    if (current_frame < 0)
     {
         current_frame = 0;
         ErrorLogger::LOG_ERROR("Reached beginning of image folder!");
@@ -214,7 +214,9 @@ bool MKV_Rendering::Image_Data::CycleCaptureBackwards()
 
 bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
 {
-    current_frame = time * FPS;
+    current_frame = (time * FPS / 1000000.0);
+
+    std::cout << "seeking to " << current_frame << std::endl;
 
     if (current_frame >= color_files.size())
     {
@@ -223,7 +225,7 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
         return false;
     }
 
-    if (current_frame < color_files.size())
+    if (current_frame < 0)
     {
         current_frame = 0;
         ErrorLogger::LOG_ERROR("Reached beginning of image folder!");
@@ -239,6 +241,9 @@ void MKV_Rendering::Image_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxel
     auto depth = (*open3d::t::io::CreateImageFromFile(depth_files[current_frame]));// .ToLegacyImage();
 
     //auto new_depth = open3d::t::geometry::Image::FromLegacyImage(ErrorLogger::EXECUTE("Transforming Depth", this, &Image_Data::TransformDepth, &depth, &color.ToLegacyImage()));
+
+    std::cout << intrinsic_t.ToString() << std::endl;
+    std::cout << extrinsic_t.ToString() << std::endl;
 
     color.To(grid->GetDevice());
     depth.To(grid->GetDevice());
