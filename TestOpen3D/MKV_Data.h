@@ -23,8 +23,6 @@ namespace MKV_Rendering {
 
 		std::vector<uint8_t> playback_data;
 
-		uint64_t _timestamp = 0;
-
 		void Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name);
 		void Calibrate();
 		void GetPlaybackDataRaw();

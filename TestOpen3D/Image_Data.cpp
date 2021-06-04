@@ -4,6 +4,14 @@
 
 #include "AdditionalUtilities.h"
 
+void MKV_Rendering::Image_Data::UpdateTimestamp()
+{
+    if (FPS > 0)
+    {
+        _timestamp = current_frame * 1000000.0 / FPS;
+    }
+}
+
 void MKV_Rendering::Image_Data::LoadImages()
 {
     open3d::utility::filesystem::ListFilesInDirectory(color_folder, color_files);
@@ -16,7 +24,7 @@ void MKV_Rendering::Image_Data::LoadImages()
 
     if (depth_files.size() == 0)
     {
-        ErrorLogger::LOG_ERROR("No color files present!", true);
+        ErrorLogger::LOG_ERROR("No depth files present!", true);
     }
 
     std::sort(color_files.begin(), color_files.end());
@@ -28,6 +36,30 @@ void MKV_Rendering::Image_Data::LoadImages()
 
     color_files.resize(max_files);
     depth_files.resize(max_files);
+
+    if (FPS <= 0)
+    {
+        std::cout << "No FPS attribute present, parsing images for timestamps..." << std::endl;
+
+        try
+        {
+            for (int i = 0; i < max_files; ++i)
+            {
+                std::vector<std::string> split_file;
+                std::vector<std::string> split_extension;
+                SplitString(color_files[i], split_file, '_');
+                SplitString(split_file.back(), split_extension, '.');
+
+                auto timestamp = std::stoull(split_extension[0]);
+                color_timestamps[timestamp] = color_files[i];
+                depth_timestamps[timestamp] = color_files[i];
+            }
+        }
+        catch (const std::exception& e)
+        {
+            ErrorLogger::LOG_ERROR("Error when parsing timestamps: " + std::string(e.what()), true);
+        }
+    }
 }
 
 void MKV_Rendering::Image_Data::GetIntrinsicTensor()
@@ -51,7 +83,7 @@ void MKV_Rendering::Image_Data::GetIntrinsicTensor()
         std::cout << "ERROR: FAILED TO READ INTRINSICS JSON!" << std::endl;
     }
 
-    auto params = calibration.depth_camera_calibration.intrinsics.parameters;
+    auto params = calibration.color_camera_calibration.intrinsics.parameters;
 
     intrinsic_t = open3d::core::Tensor::Init<double>({
             {params.param.fx, 0, params.param.cx},
@@ -155,13 +187,23 @@ open3d::geometry::Image MKV_Rendering::Image_Data::TransformDepth(open3d::geomet
     return new_depth;
 }
 
-MKV_Rendering::Image_Data::Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, std::string intrinsics, std::string extrinsics, double FPS) : Abstract_Data(root_folder)
+MKV_Rendering::Image_Data::Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, std::string intrinsics, std::string extrinsics, std::string FPS) : Abstract_Data(root_folder)
 {
     this->color_folder = root_folder + "/" + color_folder;
     this->depth_folder = root_folder + "/" + depth_folder;
     this->intrinsics_file = root_folder + "/" + intrinsics + ".json";
     this->calibration_file = root_folder + "/" + extrinsics + ".log";
-    this->FPS = FPS;
+
+    if (FPS != "")
+    {
+        this->FPS = std::stod(FPS);
+        _timestamp = 0;
+    }
+    else
+    {
+        this->FPS = 0;
+    }
+
     current_frame = 0;
 
     ErrorLogger::EXECUTE("Load Images", this, &Image_Data::LoadImages);
@@ -178,10 +220,7 @@ MKV_Rendering::Image_Data::~Image_Data()
 
 uint64_t MKV_Rendering::Image_Data::GetCaptureTimestamp()
 {
-    uint64_t to_return = (current_frame * 1000000.0 / FPS);
-
-
-    return (current_frame * 1000000.0 / FPS);
+    return _timestamp;
 }
 
 bool MKV_Rendering::Image_Data::CycleCaptureForwards()
@@ -191,9 +230,12 @@ bool MKV_Rendering::Image_Data::CycleCaptureForwards()
     if (current_frame >= color_files.size())
     {
         current_frame = color_files.size() - 1;
+        UpdateTimestamp();
         ErrorLogger::LOG_ERROR("Reached end of image folder!");
         return false;
     }
+
+    UpdateTimestamp();
 
     return true;
 }
@@ -205,22 +247,48 @@ bool MKV_Rendering::Image_Data::CycleCaptureBackwards()
     if (current_frame < 0)
     {
         current_frame = 0;
+        UpdateTimestamp();
         ErrorLogger::LOG_ERROR("Reached beginning of image folder!");
         return false;
     }
+
+    UpdateTimestamp();
 
     return true;
 }
 
 bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
 {
-    current_frame = (time * FPS / 1000000.0);
+    auto time_seconds = time / 1000000.0;
+
+    if (FPS > 0)
+    {
+        current_frame = (time_seconds * FPS);
+    }
+    else
+    {
+        auto p = color_timestamps.lower_bound(time);
+
+        if (p == color_timestamps.begin())
+        {
+            current_frame = 0;
+            ErrorLogger::LOG_ERROR("Time stamp out of bounds!");
+            return false;
+        }
+        else
+        {
+            auto it = std::find(color_files.begin(), color_files.end(), p->second);
+
+            current_frame = it - color_files.begin();
+        }
+    }
 
     std::cout << "seeking to " << current_frame << std::endl;
 
     if (current_frame >= color_files.size())
     {
         current_frame = color_files.size() - 1;
+        UpdateTimestamp();
         ErrorLogger::LOG_ERROR("Reached end of image folder!");
         return false;
     }
@@ -228,9 +296,12 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
     if (current_frame < 0)
     {
         current_frame = 0;
+        UpdateTimestamp();
         ErrorLogger::LOG_ERROR("Reached beginning of image folder!");
         return false;
     }
+
+    UpdateTimestamp();
 
     return true;
 }

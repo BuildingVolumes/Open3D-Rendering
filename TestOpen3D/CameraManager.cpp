@@ -93,7 +93,7 @@ CameraManager::CameraManager(std::string root_folder, std::string structure_file
 				camera_structure["Depth"], 
 				camera_structure["Intrinsics_Json"],
 				camera_structure["Calibration_File"],
-				std::stod(camera_structure["FPS"])
+				camera_structure["FPS"]
 			));
 		}
 		else

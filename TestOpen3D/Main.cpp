@@ -83,8 +83,10 @@ namespace MKV_Rendering {
             std::filesystem::create_directories(color_destination_folder);
             std::filesystem::create_directories(depth_destination_folder);
 
-            open3d::io::WriteImageToPNG(color_destination_folder + "/color" + num + ".png", rgbd_image->color_);
-            open3d::io::WriteImageToPNG(depth_destination_folder + "/depth" + num + ".png", rgbd_image->depth_);
+            std::string timestamp = std::to_string(data->GetTimestampCached());
+
+            open3d::io::WriteImageToPNG(color_destination_folder + "/color_" + num + "_" + timestamp + ".png", rgbd_image->color_);
+            open3d::io::WriteImageToPNG(depth_destination_folder + "/depth_" + num + "_" + timestamp + ".png", rgbd_image->depth_);
 
             next_capture = data->CycleCaptureForwards();
 
@@ -128,7 +130,11 @@ namespace MKV_Rendering {
             structure_file << "Depth " << depth_folder_name << std::endl;
             structure_file << "Intrinsics_Json " << intrinsics_filename << std::endl;
             structure_file << "Calibration_File " << calibration_filename << std::endl;
-            structure_file << "FPS " << std::to_string(FPS) << std::endl;
+
+            if (FPS > 0)
+            {
+                structure_file << "FPS " << std::to_string(FPS) << std::endl;
+            }
 
             ++iter;
         }
@@ -140,7 +146,7 @@ namespace MKV_Rendering {
         std::string images_root_folder = "Kinect Test 2";
         std::string structure_file_name = ".structure";
 
-        double FPS = 30;
+        double FPS = 0;// 30;
 
         //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
         //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
@@ -155,7 +161,7 @@ namespace MKV_Rendering {
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
-        uint64_t timestamp = 2000000;// 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 10900000; //Approximately 11 seconds in
 
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
