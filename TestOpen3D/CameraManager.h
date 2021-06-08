@@ -22,6 +22,10 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp);
 
+		std::vector<open3d::geometry::RGBDImage> ExtractImageVectorAtTimestamp(uint64_t timestamp);
+
+		void GetTrajectories(open3d::camera::PinholeCameraTrajectory &traj);
+
 		uint64_t GetHighestTimestamp();
 
 		void MakeAnErrorOnPurpose(bool cause_abort);

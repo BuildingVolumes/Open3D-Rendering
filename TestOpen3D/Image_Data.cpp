@@ -96,8 +96,8 @@ void MKV_Rendering::Image_Data::GetExtrinsicTensor()
 {
     if (calibration_file == "")
     {
-        Eigen::Matrix4d matId = Eigen::Matrix4d::Identity();
-        extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(matId);
+        extrinsic_mat = Eigen::Matrix4d::Identity();
+        extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
         return;
     }
 
@@ -134,9 +134,9 @@ void MKV_Rendering::Image_Data::GetExtrinsicTensor()
     final_mat.block<3, 3>(0, 0) = r_mat_3;
     final_mat.block<3, 1>(0, 3) = r_mat_3 * translation;
 
-    Eigen::Matrix4d final_mat2 = final_mat.inverse();
+    extrinsic_mat = final_mat.inverse();
 
-    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(final_mat2);
+    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
 }
 
 open3d::geometry::Image MKV_Rendering::Image_Data::TransformDepth(open3d::geometry::Image *old_depth, open3d::geometry::Image* color)
@@ -306,6 +306,36 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
     return true;
 }
 
+std::shared_ptr<open3d::geometry::RGBDImage> MKV_Rendering::Image_Data::GetFrameRGBD()
+{
+    auto col = (*open3d::t::io::CreateImageFromFile(color_files[current_frame])).ToLegacyImage();
+    auto dep = (*open3d::t::io::CreateImageFromFile(depth_files[current_frame])).ToLegacyImage();
+
+    std::cout << color_files[current_frame] << std::endl;
+
+    return std::make_shared<open3d::geometry::RGBDImage>(
+        col, dep
+    );
+}
+
+open3d::camera::PinholeCameraParameters MKV_Rendering::Image_Data::GetParameters()
+{
+    open3d::camera::PinholeCameraParameters to_return;
+
+    to_return.extrinsic_ = extrinsic_mat;
+
+    to_return.intrinsic_ = open3d::camera::PinholeCameraIntrinsic(
+        calibration.color_camera_calibration.resolution_width,
+        calibration.color_camera_calibration.resolution_height,
+        calibration.color_camera_calibration.intrinsics.parameters.param.fx,
+        calibration.color_camera_calibration.intrinsics.parameters.param.fy,
+        calibration.color_camera_calibration.intrinsics.parameters.param.cx,
+        calibration.color_camera_calibration.intrinsics.parameters.param.cy
+    );
+
+    return to_return;
+}
+
 void MKV_Rendering::Image_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
 {
     auto color = (*open3d::t::io::CreateImageFromFile(color_files[current_frame]));
@@ -313,8 +343,8 @@ void MKV_Rendering::Image_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxel
 
     //auto new_depth = open3d::t::geometry::Image::FromLegacyImage(ErrorLogger::EXECUTE("Transforming Depth", this, &Image_Data::TransformDepth, &depth, &color.ToLegacyImage()));
 
-    std::cout << intrinsic_t.ToString() << std::endl;
-    std::cout << extrinsic_t.ToString() << std::endl;
+    //std::cout << intrinsic_t.ToString() << std::endl;
+    //std::cout << extrinsic_t.ToString() << std::endl;
 
     color.To(grid->GetDevice());
     depth.To(grid->GetDevice());

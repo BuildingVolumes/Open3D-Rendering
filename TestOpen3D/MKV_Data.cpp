@@ -147,8 +147,8 @@ void MKV_Data::GetExtrinsicTensor()
 {
     if (calibration_file == "")
     {
-        Eigen::Matrix4d matId = Eigen::Matrix4d::Identity();
-        extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(matId);
+        extrinsic_mat = Eigen::Matrix4d::Identity();
+        extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
         return;
     }
 
@@ -185,9 +185,9 @@ void MKV_Data::GetExtrinsicTensor()
     final_mat.block<3, 3>(0, 0) = r_mat_3;
     final_mat.block<3, 1>(0, 3) = r_mat_3 * translation;
 
-    Eigen::Matrix4d final_mat2 = final_mat.inverse();
+    extrinsic_mat = final_mat.inverse();
 
-    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(final_mat2);
+    extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
 }
 
 void MKV_Data::ConvertBGRAToRGB(open3d::geometry::Image& bgra, open3d::geometry::Image& rgb)
@@ -488,6 +488,24 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::GetFrameRGBD()
     }
 
     return rgbd;
+}
+
+open3d::camera::PinholeCameraParameters MKV_Rendering::MKV_Data::GetParameters()
+{
+    open3d::camera::PinholeCameraParameters to_return;
+
+    to_return.extrinsic_ = extrinsic_mat;
+
+    to_return.intrinsic_ =  open3d::camera::PinholeCameraIntrinsic(
+        calibration.color_camera_calibration.resolution_width,
+        calibration.color_camera_calibration.resolution_height, 
+        calibration.color_camera_calibration.intrinsics.parameters.param.fx,
+        calibration.color_camera_calibration.intrinsics.parameters.param.fy,
+        calibration.color_camera_calibration.intrinsics.parameters.param.cx,
+        calibration.color_camera_calibration.intrinsics.parameters.param.cy
+        );
+
+    return to_return;
 }
 
 void MKV_Rendering::MKV_Data::WriteIntrinsics(std::string filename_and_path)

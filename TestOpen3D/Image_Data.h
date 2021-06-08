@@ -48,6 +48,10 @@ namespace MKV_Rendering {
 		bool CycleCaptureBackwards();
 		bool SeekToTime(uint64_t time);
 
+		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
+
+		open3d::camera::PinholeCameraParameters GetParameters();
+
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
 	};
 }

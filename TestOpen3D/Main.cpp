@@ -35,6 +35,18 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+    void DrawImage(geometry::Image& object_to_draw)
+    {
+        std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
+
+        auto object_ptr = std::make_shared<geometry::Image>(
+            object_to_draw);
+
+        to_draw.push_back(object_ptr);
+
+        visualization::DrawGeometries(to_draw);
+    }
+
     //Not used currently
     void PrintHelp() {
         using namespace open3d;
@@ -169,7 +181,24 @@ namespace MKV_Rendering {
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
 
-        DrawMesh(*mesh_legacy);
+        auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
+
+        auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
+        options.maximum_iteration_ = 1;
+        options.debug_output_dir_ = "NonRigidDebug";
+
+        auto trajectory = open3d::camera::PinholeCameraTrajectory();
+        ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
+
+        auto optimized_mesh = 
+            open3d::pipelines::color_map::RunNonRigidOptimizer(*mesh_legacy,
+                images, trajectory, options
+                );
+
+        
+
+        DrawMesh(optimized_mesh);
+        //DrawMesh(*mesh_legacy);
 
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }

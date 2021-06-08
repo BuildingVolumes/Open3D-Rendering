@@ -42,6 +42,9 @@ namespace MKV_Rendering {
 		bool SeekToTime(uint64_t time);
 
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
+
+		open3d::camera::PinholeCameraParameters GetParameters();
+
 		void WriteIntrinsics(std::string filename);
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);

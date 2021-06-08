@@ -153,6 +153,32 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMeshAtTimesta
 	return voxel_grid.ExtractSurfaceMesh(0.0f);
 }
 
+std::vector<open3d::geometry::RGBDImage> MKV_Rendering::CameraManager::ExtractImageVectorAtTimestamp(uint64_t timestamp)
+{
+	std::vector<open3d::geometry::RGBDImage> to_return;
+
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+
+		to_return.push_back(*ErrorLogger::EXECUTE("Extract RGBD Image Vector", cam, &Abstract_Data::GetFrameRGBD));
+	}
+
+	return to_return;
+}
+
+void MKV_Rendering::CameraManager::GetTrajectories(open3d::camera::PinholeCameraTrajectory &traj)
+{
+	for (auto cam : camera_data)
+	{
+		open3d::camera::PinholeCameraParameters params;
+
+		traj.parameters_.push_back(
+			cam->GetParameters()
+		);
+	}
+}
+
 uint64_t MKV_Rendering::CameraManager::GetHighestTimestamp()
 {
 	uint64_t to_return = 0;
