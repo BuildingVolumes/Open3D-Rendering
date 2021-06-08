@@ -9,6 +9,7 @@
 #include "open3d/Open3D.h"
 #include "open3d/io/sensor/azure_kinect/MKVMetadata.h"
 #include "open3d/geometry/RGBDImage.h"
+#include "ColorMapOptimizer.h"
 
 #include <k4a/k4a.h>
 #include <k4arecord/record.h>
@@ -45,38 +46,6 @@ namespace MKV_Rendering {
         to_draw.push_back(object_ptr);
 
         visualization::DrawGeometries(to_draw);
-    }
-
-    //Not used currently
-    void PrintHelp() {
-        using namespace open3d;
-
-        PrintOpen3DVersion();
-        // clang-format off
-        utility::LogInfo("Usage:");
-        utility::LogInfo(">    <executable_name> [mkv_and_calibration_folder] [mesh_name]");
-        utility::LogInfo("     Takes a folder containing several .mkv and .log files, and produces a mesh from the frames");
-        utility::LogInfo("     [options]");
-        utility::LogInfo("     --voxel_size [=0.0058 (m)]");
-        utility::LogInfo("     --depth_scale [=1000.0]");
-        utility::LogInfo("     --depth_max [=3.0]");
-        utility::LogInfo("     --sdf_trunc [=0.04]");
-        utility::LogInfo("     --device [CPU:0]");
-        // clang-format on
-        utility::LogInfo("");
-    }
-
-    int render_kinect(int argc, char** argv)
-    {
-        if (argc == 1 || utility::ProgramOptionExists(argc, argv, "--help") ||
-            argc < 4) {
-            PrintHelp();
-            return 1;
-        }
-
-        using MaskCode = t::geometry::TSDFVoxelGrid::SurfaceMaskCode;
-
-        return 0;
     }
 
     //Currently skipping frames for some reason
@@ -184,14 +153,13 @@ namespace MKV_Rendering {
         auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
 
         auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
-        options.maximum_iteration_ = 1;
+        options.maximum_iteration_ = 100;
         options.debug_output_dir_ = "NonRigidDebug";
 
         auto trajectory = open3d::camera::PinholeCameraTrajectory();
         ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
 
-        auto optimized_mesh = 
-            open3d::pipelines::color_map::RunNonRigidOptimizer(*mesh_legacy,
+        auto optimized_mesh = NRColorOptimization(*mesh_legacy,
                 images, trajectory, options
                 );
 
@@ -202,6 +170,39 @@ namespace MKV_Rendering {
 
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }
+}
+
+
+//Not used currently
+void PrintHelp() {
+    using namespace open3d;
+
+    PrintOpen3DVersion();
+    // clang-format off
+    utility::LogInfo("Usage:");
+    utility::LogInfo(">    <executable_name> [mkv_and_calibration_folder] [mesh_name]");
+    utility::LogInfo("     Takes a folder containing several .mkv and .log files, and produces a mesh from the frames");
+    utility::LogInfo("     [options]");
+    utility::LogInfo("     --voxel_size [=0.0058 (m)]");
+    utility::LogInfo("     --depth_scale [=1000.0]");
+    utility::LogInfo("     --depth_max [=3.0]");
+    utility::LogInfo("     --sdf_trunc [=0.04]");
+    utility::LogInfo("     --device [CPU:0]");
+    // clang-format on
+    utility::LogInfo("");
+}
+
+int render_kinect(int argc, char** argv)
+{
+    if (argc == 1 || utility::ProgramOptionExists(argc, argv, "--help") ||
+        argc < 4) {
+        PrintHelp();
+        return 1;
+    }
+
+    using MaskCode = t::geometry::TSDFVoxelGrid::SurfaceMaskCode;
+
+    return 0;
 }
 
 int main() {

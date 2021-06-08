@@ -185,6 +185,7 @@
     <ClInclude Include="Abstract_Data.h" />
     <ClInclude Include="AdditionalUtilities.h" />
     <ClInclude Include="CameraManager.h" />
+    <ClInclude Include="ColorMapOptimizer.h" />
     <ClInclude Include="ErrorLogger.h" />
     <ClInclude Include="Image_Data.h" />
     <ClInclude Include="MKV_Data.h" />

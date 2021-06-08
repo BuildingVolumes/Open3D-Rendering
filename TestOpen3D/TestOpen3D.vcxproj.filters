@@ -59,5 +59,8 @@
     <ClInclude Include="Abstract_Data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ColorMapOptimizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
