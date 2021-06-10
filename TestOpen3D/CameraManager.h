@@ -20,7 +20,21 @@ namespace MKV_Rendering {
 
 		~CameraManager();
 
+		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
+
+		bool CycleAllCamerasForward();
+
+		bool CycleAllCamerasBackward();
+
+		bool AllCamerasSeekTimestamp(uint64_t timestamp);
+
 		open3d::t::geometry::TriangleMesh GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp);
+
+		std::vector<open3d::geometry::RGBDImage> ExtractImageVectorAtTimestamp(uint64_t timestamp);
+
+		void GetTrajectories(open3d::camera::PinholeCameraTrajectory &traj);
+
+		void CreateSSMVFolder(std::string root_folder, std::string camera_list_name = "camera_list.txt");
 
 		uint64_t GetHighestTimestamp();
 

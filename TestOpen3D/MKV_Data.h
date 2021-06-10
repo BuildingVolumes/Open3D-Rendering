@@ -23,8 +23,6 @@ namespace MKV_Rendering {
 
 		std::vector<uint8_t> playback_data;
 
-		uint64_t _timestamp = 0;
-
 		void Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name);
 		void Calibrate();
 		void GetPlaybackDataRaw();
@@ -44,6 +42,9 @@ namespace MKV_Rendering {
 		bool SeekToTime(uint64_t time);
 
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
+
+		open3d::camera::PinholeCameraParameters GetParameters();
+
 		void WriteIntrinsics(std::string filename);
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);

@@ -17,6 +17,8 @@ namespace MKV_Rendering {
 		open3d::core::Tensor intrinsic_t;
 		open3d::core::Tensor extrinsic_t;
 
+		Eigen::Matrix4d extrinsic_mat;
+
 		std::string folder_name;
 
 		uint64_t _timestamp = 0;
@@ -27,6 +29,10 @@ namespace MKV_Rendering {
 		virtual bool CycleCaptureForwards() = 0;
 		virtual bool CycleCaptureBackwards() = 0;
 		virtual bool SeekToTime(uint64_t time) = 0;
+
+		virtual std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD() = 0;
+
+		virtual open3d::camera::PinholeCameraParameters GetParameters() = 0;
 
 		virtual void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data) = 0;
 
