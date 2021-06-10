@@ -127,6 +127,66 @@ CameraManager::~CameraManager()
 	}
 }
 
+open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGridData* data)
+{
+	open3d::core::Device device(data->device_code);
+
+	open3d::t::geometry::TSDFVoxelGrid voxel_grid(
+
+		{
+			{"tsdf", open3d::core::Dtype::Float32},
+			{"weight", open3d::core::Dtype::UInt16},
+			{"color", open3d::core::Dtype::UInt16}
+		},
+
+		data->voxel_size, data->signed_distance_field_truncation,
+		16, data->blocks, device
+	);
+
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
+	}
+
+	return voxel_grid.ExtractSurfaceMesh(0.0f);
+}
+
+bool MKV_Rendering::CameraManager::CycleAllCamerasForward()
+{
+	bool success = true;
+
+	for (auto cam : camera_data)
+	{
+		success = success && ErrorLogger::EXECUTE("Cycle Camera Forward", cam, &Abstract_Data::CycleCaptureForwards);
+	}
+
+	return success;
+}
+
+bool MKV_Rendering::CameraManager::CycleAllCamerasBackward()
+{
+	bool success = true;
+
+	for (auto cam : camera_data)
+	{
+		success = success && ErrorLogger::EXECUTE("Cycle Camera Backward", cam, &Abstract_Data::CycleCaptureBackwards);
+	}
+
+	return success;
+}
+
+bool MKV_Rendering::CameraManager::AllCamerasSeekTimestamp(uint64_t timestamp)
+{
+	bool success = true;
+
+	for (auto cam : camera_data)
+	{
+		success = success && ErrorLogger::EXECUTE("Camera Seek Time", cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	return success;
+}
+
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp)
 {
 	open3d::core::Device device(data->device_code);
@@ -177,6 +237,16 @@ void MKV_Rendering::CameraManager::GetTrajectories(open3d::camera::PinholeCamera
 			cam->GetParameters()
 		);
 	}
+}
+
+void MKV_Rendering::CameraManager::CreateSSMVFolder(std::string destination_folder, std::string camera_list_name)
+{
+	std::ofstream camera_data_file;
+	camera_data_file.open(camera_list_name);
+
+	
+
+	camera_data_file.close();
 }
 
 uint64_t MKV_Rendering::CameraManager::GetHighestTimestamp()
