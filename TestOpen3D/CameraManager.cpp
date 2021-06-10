@@ -239,13 +239,67 @@ void MKV_Rendering::CameraManager::GetTrajectories(open3d::camera::PinholeCamera
 	}
 }
 
-void MKV_Rendering::CameraManager::CreateSSMVFolder(std::string destination_folder, std::string camera_list_name)
+void MKV_Rendering::CameraManager::CreateSSMVFolder(
+	VoxelGridData *vgd, std::string destination_folder, uint64_t timestamp, std::string camera_calib_filename, std::string image_list_filename, std::string image_base_name, std::string mesh_name
+)
 {
 	std::ofstream camera_data_file;
-	camera_data_file.open(camera_list_name);
+	std::ofstream image_data_file;
 
-	
+	std::filesystem::create_directories(destination_folder);
 
+	camera_data_file.open(destination_folder + "/" + camera_calib_filename);
+	image_data_file.open(destination_folder + "/" + image_list_filename);
+
+	camera_data_file << camera_data.size() << std::endl;
+
+	for (int i = 0; i < camera_data.size(); ++i)
+	{
+		auto int_mat = camera_data[i]->GetIntrinsicMat();
+		auto ext_mat = camera_data[i]->GetExtrinsicMat();
+
+		for (int j = 0; j < 3; ++j)
+		{
+			for (int k = 0; k < 3; ++k)
+			{
+				camera_data_file << int_mat(j, k) << " ";
+			}
+		}
+
+		for (int j = 0; j < 3; ++j)
+		{
+			for (int k = 0; k < 3; ++k)
+			{
+				camera_data_file << ext_mat(j, k) << " ";
+			}
+		}
+
+		for (int j = 0; j < 3; ++j)
+		{
+			camera_data_file << ext_mat(j, 3) << " ";
+		}
+
+		camera_data[i]->SeekToTime(timestamp);
+		auto rgbd_image = camera_data[i]->GetFrameRGBD();
+
+		camera_data_file << rgbd_image->color_.width_ << " ";
+		camera_data_file << rgbd_image->color_.height_ << std::endl;
+
+
+
+		std::string image_name = GetNumberFixedLength(i, 8) + image_base_name;
+		std::string image_address = destination_folder + "/" + image_name;
+
+		open3d::io::WriteImageToPNG(image_address, rgbd_image->color_);
+
+		image_data_file << image_address << std::endl;
+	}
+
+	auto mesh = GetMeshAtTimestamp(vgd, timestamp).ToLegacyTriangleMesh();
+
+	open3d::io::WriteTriangleMesh(destination_folder + "/" + mesh_name, mesh);
+
+	image_data_file.close();
 	camera_data_file.close();
 }
 

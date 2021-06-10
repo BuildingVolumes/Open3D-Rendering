@@ -55,14 +55,14 @@ namespace MKV_Rendering {
 
         int iter = 0;
 
+        std::filesystem::create_directories(color_destination_folder);
+        std::filesystem::create_directories(depth_destination_folder);
+
         while (next_capture && iter < max_output_images)
         {
             auto rgbd_image = data->GetFrameRGBD();
 
             std::string num = GetNumberFixedLength(iter, 8);
-
-            std::filesystem::create_directories(color_destination_folder);
-            std::filesystem::create_directories(depth_destination_folder);
 
             std::string timestamp = std::to_string(data->GetTimestampCached());
 
@@ -144,29 +144,32 @@ namespace MKV_Rendering {
 
         uint64_t timestamp = 10900000; //Approximately 11 seconds in
 
+        cm.CreateSSMVFolder(&vgd, "SSMV_Data", timestamp);
+        return;
+
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
 
-        auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
+        //auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
+        //
+        //auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
+        //options.maximum_iteration_ = 100;
+        //options.debug_output_dir_ = "NonRigidDebug";
+        //
+        //auto trajectory = open3d::camera::PinholeCameraTrajectory();
+        //ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
 
-        auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
-        options.maximum_iteration_ = 100;
-        options.debug_output_dir_ = "NonRigidDebug";
-
-        auto trajectory = open3d::camera::PinholeCameraTrajectory();
-        ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
-
-        auto optimized_mesh = NRColorOptimization(*mesh_legacy,
-                images, trajectory, options
-                );
+        //auto optimized_mesh = NRColorOptimization(*mesh_legacy,
+        //        images, trajectory, options
+        //        );
 
         
 
-        DrawMesh(optimized_mesh);
-        //DrawMesh(*mesh_legacy);
+        //DrawMesh(optimized_mesh);
+        DrawMesh(*mesh_legacy);
 
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }

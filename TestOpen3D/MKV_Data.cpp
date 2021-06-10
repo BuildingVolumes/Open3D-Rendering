@@ -136,6 +136,12 @@ void MKV_Data::GetIntrinsicTensor()
     auto principleX = params.cx;
     auto principleY = params.cy;
 
+    intrinsic_mat = Eigen::Matrix3d::Identity();
+    intrinsic_mat(0, 0) = params.fx;
+    intrinsic_mat(1, 1) = params.fy;
+    intrinsic_mat(0, 2) = params.cx;
+    intrinsic_mat(1, 2) = params.cy;
+
     intrinsic_t = open3d::core::Tensor::Init<double>({
         {params.fx, 0, params.cx},
         {0, params.fy, params.cy},
