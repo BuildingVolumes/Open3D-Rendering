@@ -5,3 +5,5 @@ TestOpen3D/Kinect Test 1/
 *.ply
 x64/
 TestOpen3D/Kinect Test 2/
+TestOpen3D.vcxproj
+TestOpen3D.vcxproj.user

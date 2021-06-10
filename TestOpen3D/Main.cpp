@@ -86,6 +86,18 @@ namespace MKV_Rendering {
 
         return result;
     }
+
+    std::vector<Alembic::Abc::C3f> toAlembicColour(std::vector<Eigen::Vector3d> source) {
+        std::vector<Alembic::Abc::C3f> result;
+        result.resize(source.size());
+        for (int i = 0; i < source.size(); i++) {
+            result[i].x = source[i].x();
+            result[i].y = source[i].y();
+            result[i].z = source[i].z();
+        }
+
+        return result;
+    }
     void saveMesh(geometry::TriangleMesh& object_to_draw, AlembicWriter& alembicWriter) {
         AlembicMeshData meshData;
 
@@ -96,6 +108,9 @@ namespace MKV_Rendering {
         meshData.numIndicies = object_to_draw.triangles_.size() * 3;
         meshData.indicies.resize(meshData.numIndicies);
         
+        
+        
+
         #pragma omp parallel
         #pragma omp for
         for (int i = 0; i < meshData.numIndicies/3; i++) {
@@ -115,6 +130,9 @@ namespace MKV_Rendering {
 
         meshData.normals = double3ToAlembic(object_to_draw.vertex_normals_);
         meshData.numNormals = meshData.normals.size() / 3;
+
+
+        meshData.vertexColours = toAlembicColour(object_to_draw.vertex_colors_);
 
         auto end = std::chrono::steady_clock::now();
 
@@ -208,8 +226,8 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-        //CameraManager cm(mkv_root_folder, structure_file_name);
-        CameraManager cm(images_root_folder, structure_file_name);
+        CameraManager cm(mkv_root_folder, structure_file_name);
+        //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
@@ -222,7 +240,7 @@ namespace MKV_Rendering {
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
 
         
-        //DrawMesh(*mesh_legacy);
+        DrawMesh(*mesh_legacy);
 
         float startTime = 1.0f / 3.0f;
         float deltaTime = 0.25;
