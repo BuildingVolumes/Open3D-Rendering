@@ -6,4 +6,6 @@ TestOpen3D/Kinect Test 1/
 x64/
 TestOpen3D/Kinect Test 2/
 TestOpen3D.vcxproj
+TestOpen3D.vcxproj.filters
 TestOpen3D.vcxproj.user
+*.abc
