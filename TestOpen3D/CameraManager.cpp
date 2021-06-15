@@ -159,28 +159,30 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		ErrorLogger::LOG_ERROR("No cameras present!", true);
 	}
 	
-	std::vector<open3d::geometry::Image> image_vector;
+	std::vector<open3d::geometry::Image> color_images;
+	std::vector<open3d::geometry::Image> depth_images;
 
 	//Write all camera images at the current time to one vector
 	for (auto cam : camera_data)
 	{
 		auto rgbd_im = ErrorLogger::EXECUTE("Get RGBD Image for Texture Stitching", cam, &Abstract_Data::GetFrameRGBD);
 
-		image_vector.push_back(rgbd_im->color_);
+		color_images.push_back(rgbd_im->color_);
+		depth_images.push_back(*(rgbd_im->depth_.ConvertDepthToFloatImage()));
 	}
 
 	auto to_return = std::make_shared<open3d::geometry::Image>(open3d::geometry::Image());
 
 	//Combine all the image data into one
-	for (int i = 0; i < image_vector.size(); ++i)
+	for (int i = 0; i < color_images.size(); ++i)
 	{
-		to_return->data_.insert(to_return->data_.begin() + to_return->data_.size(), image_vector[i].data_.begin(), image_vector[i].data_.end());
+		to_return->data_.insert(to_return->data_.begin() + to_return->data_.size(), color_images[i].data_.begin(), color_images[i].data_.end());
 	}
 
-	to_return->height_ = image_vector[0].height_ * image_vector.size();
-	to_return->width_ = image_vector[0].width_;
-	to_return->bytes_per_channel_ = image_vector[0].bytes_per_channel_;
-	to_return->num_of_channels_ = image_vector[0].num_of_channels_;
+	to_return->height_ = color_images[0].height_ * color_images.size();
+	to_return->width_ = color_images[0].width_;
+	to_return->bytes_per_channel_ = color_images[0].bytes_per_channel_;
+	to_return->num_of_channels_ = color_images[0].num_of_channels_;
 
 
 	int camera_count = camera_data.size();	
@@ -201,7 +203,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		auto mat = camera_data[i]->GetExtrinsicMat();
 
-		mesh->textures_.push_back(image_vector[i]);
+		mesh->textures_.push_back(color_images[i]);
 
 		camera_triangles.push_back(std::vector<int>());
 		camera_positions_original.push_back(mat.block<3, 1>(0, 3));
@@ -222,20 +224,15 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	//Iterate through all the triangles and find the normal that aligns closest to a camera
 	for (int i = 0; i < mesh->triangles_.size(); ++i)
 	{
-		float highest_dot = -1.0f;
-		int highest_camera = -1;
+		double closest_sum_square_depth = DBL_MAX;
+		int best_camera = -1;
 
 		//Currently each index should point to itself, we will force it to point elsewhere if need be
 		index_redirect.push_back(i);
 
 		for (int j = 0; j < camera_count; ++j)
 		{
-			Eigen::Vector3d true_normal =
-				(mesh->vertex_normals_[mesh->triangles_[i].x()] +
-				mesh->vertex_normals_[mesh->triangles_[i].y()] +
-				mesh->vertex_normals_[mesh->triangles_[i].z()]) / 3.0;
-
-			float new_dot = -camera_positions_normalized[j].dot(true_normal.normalized());
+			double new_sum_square_depth = 0;
 
 			bool bad_camera = false;
 			for (int k = 0; k < 3; ++k)
@@ -244,15 +241,23 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				Eigen::Vector3d uvz = camera_intrinsics[j] *
 					(camera_rotations[j] * mesh->vertices_[mesh->triangles_[i](k)] + camera_positions_original[j]);
 
-				uvz.x() /= (uvz.z() * (double)image_vector[j].width_);
+				uvz.x() /= (uvz.z());
 
-				uvz.y() /= (uvz.z() * (double)image_vector[j].height_);
+				uvz.y() /= (uvz.z());
 
-				if (uvz.x() > 1 || uvz.x() < 0 || uvz.y() > 1 || uvz.y() < 0)
+				double depth = 0;
+				bool in_bounds;
+				std::tie(in_bounds, depth) = depth_images[j].FloatValueAt(uvz.x(), uvz.y());
+
+				if (!in_bounds)
 				{
 					bad_camera = true;
 					break;
 				}
+
+				depth = uvz.z() - depth;
+				
+				new_sum_square_depth += depth * depth;
 			}
 
 			if (bad_camera)
@@ -260,21 +265,21 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				continue;
 			}
 
-			int higher = new_dot > highest_dot;
+			int lower = new_sum_square_depth < closest_sum_square_depth;
 
-			highest_dot = higher * new_dot + (1 - higher) * highest_dot;
-			highest_camera = higher * j + (1 - higher) * highest_camera;
+			closest_sum_square_depth = lower * new_sum_square_depth + (1 - lower) * closest_sum_square_depth;
+			best_camera = lower * j + (1 - lower) * best_camera;
 		}
 
-		if (highest_camera == -1)
+		if (best_camera == -1)
 		{
 			++withoutUV;
 		}
 		else
 		{
 			//Record which camera 'owns' this triangle
-			camera_triangles[highest_camera].push_back(i);
-			mesh->triangle_material_ids_[i] = highest_camera;
+			camera_triangles[best_camera].push_back(i);
+			mesh->triangle_material_ids_[i] = best_camera;
 		}
 	}
 
@@ -330,9 +335,9 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				Eigen::Vector3d uvz = camera_intrinsics[i] *
 					(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
 
-				uvz.x() /= (uvz.z() * (double)image_vector[i].width_);
+				uvz.x() /= (uvz.z() * (double)color_images[i].width_);
 
-				uvz.y() /= (uvz.z() * (double)image_vector[i].height_);
+				uvz.y() /= (uvz.z() * (double)color_images[i].height_);
 				uvz.y() += (double)i;
 				uvz.y() /= (double)camera_count;
 				uvz.y() = 1 - uvz.y();
