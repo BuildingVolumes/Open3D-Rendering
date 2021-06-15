@@ -22,6 +22,10 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh);
+
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh *mesh, uint64_t timestamp);
+
 		bool CycleAllCamerasForward();
 
 		bool CycleAllCamerasBackward();

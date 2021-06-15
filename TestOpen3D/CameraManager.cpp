@@ -151,6 +151,213 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGri
 	return voxel_grid.ExtractSurfaceMesh(0.0f);
 }
 
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh)
+{
+	//If there are no cameras, throw an error
+	if (camera_data.size() <= 0)
+	{
+		ErrorLogger::LOG_ERROR("No cameras present!", true);
+	}
+	
+	std::vector<open3d::geometry::Image> image_vector;
+
+	//Write all camera images at the current time to one vector
+	for (auto cam : camera_data)
+	{
+		auto rgbd_im = ErrorLogger::EXECUTE("Get RGBD Image for Texture Stitching", cam, &Abstract_Data::GetFrameRGBD);
+
+		image_vector.push_back(rgbd_im->color_);
+	}
+
+	auto to_return = std::make_shared<open3d::geometry::Image>(open3d::geometry::Image());
+
+	//Combine all the image data into one
+	for (int i = 0; i < image_vector.size(); ++i)
+	{
+		to_return->data_.insert(to_return->data_.begin() + to_return->data_.size(), image_vector[i].data_.begin(), image_vector[i].data_.end());
+	}
+
+	to_return->height_ = image_vector[0].height_ * image_vector.size();
+	to_return->width_ = image_vector[0].width_;
+	to_return->bytes_per_channel_ = image_vector[0].bytes_per_channel_;
+	to_return->num_of_channels_ = image_vector[0].num_of_channels_;
+
+
+	int camera_count = camera_data.size();	
+	int vert_count = mesh->vertices_.size();
+
+	//Save data about the cameras for future use, and allocate triangle vectors
+
+	std::vector<std::vector<int>> camera_triangles;
+	std::vector<Eigen::Vector3d> camera_positions_original;
+	std::vector<Eigen::Vector3d> camera_positions_rotated;
+	std::vector<Eigen::Vector3d> camera_positions_normalized;
+	std::vector<Eigen::Matrix3d> camera_rotations;
+	std::vector<Eigen::Matrix3d> camera_intrinsics;
+
+	mesh->textures_.clear();
+
+	for (int i = 0; i < camera_count; ++i)
+	{
+		auto mat = camera_data[i]->GetExtrinsicMat();
+
+		mesh->textures_.push_back(image_vector[i]);
+
+		camera_triangles.push_back(std::vector<int>());
+		camera_positions_original.push_back(mat.block<3, 1>(0, 3));
+		camera_rotations.push_back(mat.block<3, 3>(0, 0));
+		camera_positions_rotated.push_back(mat.block<3, 3>(0, 0) * mat.block<3, 1>(0, 3));
+		camera_positions_normalized.push_back(camera_positions_rotated[i].normalized());
+		camera_intrinsics.push_back(camera_data[i]->GetIntrinsicMat());
+	}
+
+	//Used to allow an easy way to modify triangle indices
+	std::vector<int> index_redirect;
+
+	mesh->triangle_material_ids_.resize(mesh->triangles_.size());
+
+	//Number of triangles without UVs
+	int withoutUV = 0;
+
+	//Iterate through all the triangles and find the normal that aligns closest to a camera
+	for (int i = 0; i < mesh->triangles_.size(); ++i)
+	{
+		float highest_dot = -1.0f;
+		int highest_camera = -1;
+
+		//Currently each index should point to itself, we will force it to point elsewhere if need be
+		index_redirect.push_back(i);
+
+		for (int j = 0; j < camera_count; ++j)
+		{
+			Eigen::Vector3d true_normal =
+				(mesh->vertex_normals_[mesh->triangles_[i].x()] +
+				mesh->vertex_normals_[mesh->triangles_[i].y()] +
+				mesh->vertex_normals_[mesh->triangles_[i].z()]) / 3.0;
+
+			float new_dot = -camera_positions_normalized[j].dot(true_normal.normalized());
+
+			bool bad_camera = false;
+			for (int k = 0; k < 3; ++k)
+			{
+				//Check that the UVs would actually be on the image
+				Eigen::Vector3d uvz = camera_intrinsics[j] *
+					(camera_rotations[j] * mesh->vertices_[mesh->triangles_[i](k)] + camera_positions_original[j]);
+
+				uvz.x() /= (uvz.z() * (double)image_vector[j].width_);
+
+				uvz.y() /= (uvz.z() * (double)image_vector[j].height_);
+
+				if (uvz.x() > 1 || uvz.x() < 0 || uvz.y() > 1 || uvz.y() < 0)
+				{
+					bad_camera = true;
+					break;
+				}
+			}
+
+			if (bad_camera)
+			{
+				continue;
+			}
+
+			int higher = new_dot > highest_dot;
+
+			highest_dot = higher * new_dot + (1 - higher) * highest_dot;
+			highest_camera = higher * j + (1 - higher) * highest_camera;
+		}
+
+		if (highest_camera == -1)
+		{
+			++withoutUV;
+		}
+		else
+		{
+			//Record which camera 'owns' this triangle
+			camera_triangles[highest_camera].push_back(i);
+			mesh->triangle_material_ids_[i] = highest_camera;
+		}
+	}
+
+	std::cout << "There were " << withoutUV << "/" << mesh->triangles_.size() << " triangles without UV coordinates" << std::endl;
+
+	//Not ultimately necessary, but it's nice to be certain
+	mesh->triangle_uvs_.clear();
+	
+	//Used to determine which camera each index belongs to
+	std::vector<int> index_claims;
+	std::vector<Eigen::Vector3i> new_triangles;
+
+	index_claims.resize(vert_count, -1);
+	mesh->triangle_uvs_.resize(vert_count, Eigen::Vector2d(0.0, 0.0));
+
+	//Create new vertices such that we can split relevant UVs by camera
+	for (int i = 0; i < camera_count; ++i)
+	{
+		for (auto triangle_index : camera_triangles[i])
+		{
+			auto triangle = mesh->triangles_[triangle_index];
+			for (int j = 0; j < 3; ++j)
+			{
+				int vert_loc = index_redirect[triangle(j)];
+
+				if (index_claims[vert_loc] < 0 || index_claims[vert_loc] == i)
+				{
+					//No other camera has claimed this index, we set appropriate data
+					index_claims[vert_loc] = i;
+
+				}
+				else
+				{
+					//If the index is already claimed by a different camera, then duplicate it and redirect the triangles
+					index_redirect[triangle(j)] = vert_count;
+					vert_loc = index_redirect[triangle(j)];
+					++vert_count;
+
+					index_claims.push_back(i);
+					mesh->vertices_.push_back(mesh->vertices_[triangle(j)]);
+					mesh->vertex_normals_.push_back(mesh->vertex_normals_[triangle(j)]);
+					mesh->vertex_colors_.push_back(mesh->vertex_colors_[triangle(j)]);
+					mesh->triangle_uvs_.push_back(mesh->triangle_uvs_[triangle(j)]);
+				}
+
+				//Ensure that we are pointing to the correct triangle index, if we had to change it previously
+				mesh->triangles_[triangle_index](j) = vert_loc;
+
+				//Eliminate the vertex colors
+				mesh->vertex_colors_[vert_loc] = Eigen::Vector3d(0.5, 0.5, 0.5);
+
+				//Set UVs
+				Eigen::Vector3d uvz = camera_intrinsics[i] *
+					(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
+
+				uvz.x() /= (uvz.z() * (double)image_vector[i].width_);
+
+				uvz.y() /= (uvz.z() * (double)image_vector[i].height_);
+				uvz.y() += (double)i;
+				uvz.y() /= (double)camera_count;
+				uvz.y() = 1 - uvz.y();
+
+				//uvz.x() /= uvz.z();
+				//uvz.y() /= uvz.z();
+
+				mesh->triangle_uvs_[vert_loc] = Eigen::Vector2d(uvz.x(), uvz.y());
+			}
+		}
+	}
+
+	return to_return;
+}
+
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp)
+{
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	return CreateUVMapAndTexture(mesh);
+}
+
 bool MKV_Rendering::CameraManager::CycleAllCamerasForward()
 {
 	bool success = true;
