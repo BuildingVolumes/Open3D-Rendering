@@ -22,6 +22,10 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh);
+
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh *mesh, uint64_t timestamp);
+
 		bool CycleAllCamerasForward();
 
 		bool CycleAllCamerasBackward();
@@ -34,7 +38,12 @@ namespace MKV_Rendering {
 
 		void GetTrajectories(open3d::camera::PinholeCameraTrajectory &traj);
 
-		void CreateSSMVFolder(std::string root_folder, std::string camera_list_name = "camera_list.txt");
+		void CreateSSMVFolder(VoxelGridData *vgd, 
+			std::string destination_folder, uint64_t timestamp, 
+			std::string camera_calib_filename = "camera_calibrations.txt", 
+			std::string image_list_filename = "image_list.txt", 
+			std::string image_base_name = "image.png",
+			std::string mesh_name = "SSMV_Mesh.obj");
 
 		uint64_t GetHighestTimestamp();
 

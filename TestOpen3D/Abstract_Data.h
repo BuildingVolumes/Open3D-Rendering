@@ -18,6 +18,7 @@ namespace MKV_Rendering {
 		open3d::core::Tensor extrinsic_t;
 
 		Eigen::Matrix4d extrinsic_mat;
+		Eigen::Matrix3d intrinsic_mat;
 
 		std::string folder_name;
 
@@ -38,6 +39,9 @@ namespace MKV_Rendering {
 
 		open3d::core::Tensor GetIntrinsic();
 		open3d::core::Tensor GetExtrinsic();
+
+		Eigen::Matrix4d GetExtrinsicMat() { return extrinsic_mat; }
+		Eigen::Matrix3d GetIntrinsicMat() { return intrinsic_mat; }
 
 		uint64_t GetTimestampCached() { return _timestamp; }
 	};

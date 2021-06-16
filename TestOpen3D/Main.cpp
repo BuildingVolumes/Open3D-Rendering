@@ -30,6 +30,55 @@ using namespace open3d::io;
 using namespace Eigen;
 
 namespace MKV_Rendering {
+    void WriteOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh)
+    {
+        std::ofstream writer;
+
+        if (filepath != "")
+        {
+            std::filesystem::create_directories(filepath);
+
+            writer.open(filepath + "/" + filename);
+        }
+        else
+        {
+            writer.open(filename);
+        }
+
+        for (int i = 0; i < mesh->vertices_.size(); ++i)
+        {
+            auto vert = mesh->vertices_[i];
+
+            writer << "v " << vert.x() << " " << vert.y() << " " << vert.z() << "\n";
+        }
+
+        for (int i = 0; i < mesh->triangle_uvs_.size(); ++i)
+        {
+            auto uv = mesh->triangle_uvs_[i];
+
+            writer << "vt " << uv.x() << " " << uv.y() << "\n";
+        }
+
+        for (int i = 0; i < mesh->vertex_normals_.size(); ++i)
+        {
+            auto norm = mesh->vertex_normals_[i];
+
+            writer << "vn " << norm.x() << " " << norm.y() << " " << norm.z() << "\n";
+        }
+
+        for (int i = 0; i < mesh->triangles_.size(); ++i)
+        {
+            auto tri = mesh->triangles_[i];
+
+            writer << "f " <<
+                (tri.x() + 1) << "/" << (tri.x() + 1) << "/" << (tri.x() + 1) << " " <<
+                (tri.y() + 1) << "/" << (tri.y() + 1) << "/" << (tri.y() + 1) << " " <<
+                (tri.z() + 1) << "/" << (tri.z() + 1) << "/" << (tri.z() + 1) << "\n";
+        }
+
+        writer.close();
+    }
+
     void DrawMesh(geometry::TriangleMesh &object_to_draw)
     {
         std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
@@ -146,14 +195,14 @@ namespace MKV_Rendering {
 
         int iter = 0;
 
+        std::filesystem::create_directories(color_destination_folder);
+        std::filesystem::create_directories(depth_destination_folder);
+
         while (next_capture && iter < max_output_images)
         {
             auto rgbd_image = data->GetFrameRGBD();
 
             std::string num = GetNumberFixedLength(iter, 8);
-
-            std::filesystem::create_directories(color_destination_folder);
-            std::filesystem::create_directories(depth_destination_folder);
 
             std::string timestamp = std::to_string(data->GetTimestampCached());
 
@@ -240,36 +289,24 @@ namespace MKV_Rendering {
             auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
             saveMesh(legacyMesh, alembicWriter);
         }
-        /*
+        
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
-        */
-        /*
-        auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
 
-        auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
-        options.maximum_iteration_ = 100;
-        options.debug_output_dir_ = "NonRigidDebug";
+        auto stitched_image = ErrorLogger::EXECUTE(
+            "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
+        );
 
-        auto trajectory = open3d::camera::PinholeCameraTrajectory();
-        ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
-        */
-        
-        /*
-        auto optimized_mesh = NRColorOptimization(*mesh_legacy,
-                images, trajectory, options
-                );
-        */
-        
+        open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
 
-        //DrawMesh(optimized_mesh);
+
         //DrawMesh(*mesh_legacy);
+        //return;
 
-        
-        //saveMesh(*mesh_legacy, alembicWriter);
+  
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }
 

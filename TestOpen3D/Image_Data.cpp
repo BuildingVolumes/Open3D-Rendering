@@ -85,6 +85,12 @@ void MKV_Rendering::Image_Data::GetIntrinsicTensor()
 
     auto params = calibration.color_camera_calibration.intrinsics.parameters;
 
+    intrinsic_mat = Eigen::Matrix3d::Identity();
+    intrinsic_mat(0, 0) = params.param.fx;
+    intrinsic_mat(1, 1) = params.param.fy;
+    intrinsic_mat(0, 2) = params.param.cx;
+    intrinsic_mat(1, 2) = params.param.cy;
+
     intrinsic_t = open3d::core::Tensor::Init<double>({
             {params.param.fx, 0, params.param.cx},
             {0, params.param.fy, params.param.cy},
