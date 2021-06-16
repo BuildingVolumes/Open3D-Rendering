@@ -68,6 +68,21 @@ namespace MKV_Rendering {
         return result;
     }
 
+    std::vector<Alembic::Abc::float32_t> double3ToAlembicNegate(std::vector<Eigen::Vector3d> source) {
+        std::vector<Alembic::Abc::float32_t> result;
+        result.resize(source.size() * 3); //source stores each element as  (x,y,z) while result stores it sequently
+
+        #pragma omp parallel
+        #pragma omp for
+        for (int i = 0; i < source.size(); i++) {
+            result[i * 3 + 0] = -source[i].x();
+            result[i * 3 + 1] = -source[i].y();
+            result[i * 3 + 2] = -source[i].z();
+        }
+
+        return result;
+    }
+
     std::vector<Alembic::Abc::C3f> toAlembicColour(std::vector<Eigen::Vector3d> source) {
         std::vector<Alembic::Abc::C3f> result;
         result.resize(source.size());
@@ -109,7 +124,7 @@ namespace MKV_Rendering {
             meshData.counts[i] = 3;
         }
 
-        meshData.normals = double3ToAlembic(object_to_draw.vertex_normals_);
+        meshData.normals = double3ToAlembicNegate(object_to_draw.vertex_normals_);
         meshData.numNormals = meshData.normals.size() / 3;
 
 
@@ -205,6 +220,7 @@ namespace MKV_Rendering {
 
         double FPS = 0;// 30;
 
+        
         //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
         //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
         //
@@ -212,20 +228,26 @@ namespace MKV_Rendering {
 
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
-
+        AlembicWriter alembicWriter("correctedNormals.abc", "Hogue", (1.0 / 30.0), 0.25);
         CameraManager cm(mkv_root_folder, structure_file_name);
         //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
         uint64_t timestamp = 10900000; //Approximately 11 seconds in
-
+        while (cm.CycleAllCamerasForward()) {
+            auto alembicMesh = cm.GetMesh(&vgd);
+            auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
+            saveMesh(legacyMesh, alembicWriter);
+        }
+        /*
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
-
+        */
+        /*
         auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
 
         auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
@@ -234,16 +256,20 @@ namespace MKV_Rendering {
 
         auto trajectory = open3d::camera::PinholeCameraTrajectory();
         ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
-
+        */
+        
+        /*
         auto optimized_mesh = NRColorOptimization(*mesh_legacy,
                 images, trajectory, options
                 );
-
+        */
         
 
-        DrawMesh(optimized_mesh);
+        //DrawMesh(optimized_mesh);
         //DrawMesh(*mesh_legacy);
 
+        
+        //saveMesh(*mesh_legacy, alembicWriter);
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }
 
