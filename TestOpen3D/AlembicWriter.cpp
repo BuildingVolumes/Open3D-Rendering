@@ -39,7 +39,8 @@ AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float st
 	//meshNode = Alembic::AbcGeom::v12::OPolyMesh(xform, "meshy", g_ts);
 
 
-	
+	mesh.setUVSourceName("yeet");
+
 	colourProps = Alembic::AbcGeom::OC3fGeomParam(mesh.getArbGeomParams(), "Test Colour",
 		true, Alembic::AbcGeom::v12::GeometryScope::kVertexScope, 1);
 	
@@ -53,15 +54,27 @@ AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float st
 }
 
 void AlembicWriter::saveFrame(struct AlembicMeshData meshData) {
-	Alembic::AbcGeom::OPolyMeshSchema::Sample g_meshsamp = Alembic::AbcGeom::OPolyMeshSchema::Sample(
-		Alembic::AbcGeom::v12::V3fArraySample((const Alembic::AbcGeom::v12::V3f*)meshData.vertices.data(), meshData.numVerts),
-		Alembic::AbcGeom::v12::Int32ArraySample(meshData.indicies.data(), meshData.numIndicies),
-		Alembic::AbcGeom::v12::Int32ArraySample(meshData.counts.data(), meshData.numCounts));
+
+
+
+	
+
+
+	Alembic::AbcGeom::v12::OV2fGeomParam::Sample UVs(Alembic::AbcGeom::v12::V2fArraySample((const Alembic::AbcGeom::v12::V2f*)meshData.uvs.data(),
+		meshData.numUvs), Alembic::AbcGeom::v12::kFacevaryingScope);
+
 
 	Alembic::AbcGeom::v12::ON3fGeomParam::Sample normals(Alembic::AbcGeom::v12::N3fArraySample((const Alembic::AbcGeom::v12::N3f*)meshData.normals.data(),
 		meshData.numNormals),
 		Alembic::AbcGeom::v12::kFacevaryingScope);
 
+
+	Alembic::AbcGeom::OPolyMeshSchema::Sample g_meshsamp = Alembic::AbcGeom::OPolyMeshSchema::Sample(
+		Alembic::AbcGeom::v12::V3fArraySample((const Alembic::AbcGeom::v12::V3f*)meshData.vertices.data(), meshData.numVerts),
+		Alembic::AbcGeom::v12::Int32ArraySample(meshData.indicies.data(), meshData.numIndicies),
+		Alembic::AbcGeom::v12::Int32ArraySample(meshData.counts.data(), meshData.numCounts));
+
+	
 
 
 	
@@ -69,12 +82,15 @@ void AlembicWriter::saveFrame(struct AlembicMeshData meshData) {
 		Alembic::AbcGeom::v12::GeometryScope::kVertexScope);
 
 
+	
+
+
 	colourProps.set(colourParam);
 	
 	g_meshsamp.setNormals(normals);
 
-
-
+	g_meshsamp.setUVs(UVs);
+	
 	mesh.set(g_meshsamp);
 
 }

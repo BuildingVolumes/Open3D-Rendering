@@ -124,9 +124,9 @@ namespace MKV_Rendering {
         #pragma omp parallel
         #pragma omp for
         for (int i = 0; i < source.size(); i++) {
-            result[i * 3 + 0] = -source[i].x();
-            result[i * 3 + 1] = -source[i].y();
-            result[i * 3 + 2] = -source[i].z();
+            result[i * 3 + 0] = source[i].x();
+            result[i * 3 + 1] = source[i].y();
+            result[i * 3 + 2] = source[i].z();
         }
 
         return result;
@@ -139,6 +139,17 @@ namespace MKV_Rendering {
             result[i].x = source[i].x();
             result[i].y = source[i].y();
             result[i].z = source[i].z();
+        }
+
+        return result;
+    }
+
+    std::vector< Alembic::Abc::float32_t> toAlembicUVs(std::vector<Eigen::Vector2d> source) {
+        std::vector<Alembic::Abc::float32_t> result;
+        result.resize(source.size()*2);
+        for (int i = 0; i < source.size(); i++) {
+            result[i*2+0] = source[i].x();
+            result[i*2+1] = source[i].y();
         }
 
         return result;
@@ -160,8 +171,8 @@ namespace MKV_Rendering {
         #pragma omp for
         for (int i = 0; i < meshData.numIndicies/3; i++) {
             meshData.indicies[i * 3 + 0] = object_to_draw.triangles_[i].x();
-            meshData.indicies[i * 3 + 1] = object_to_draw.triangles_[i].y();
-            meshData.indicies[i * 3 + 2] = object_to_draw.triangles_[i].z();
+            meshData.indicies[i * 3 + 1] = object_to_draw.triangles_[i].z();
+            meshData.indicies[i * 3 + 2] = object_to_draw.triangles_[i].y();
         }
 
         meshData.numCounts = meshData.numIndicies / 3;
@@ -176,8 +187,13 @@ namespace MKV_Rendering {
         meshData.normals = double3ToAlembicNegate(object_to_draw.vertex_normals_);
         meshData.numNormals = meshData.normals.size() / 3;
 
+        meshData.uvs = toAlembicUVs(object_to_draw.triangle_uvs_);
+        meshData.numUvs = object_to_draw.triangle_uvs_.size();
 
         meshData.vertexColours = toAlembicColour(object_to_draw.vertex_colors_);
+
+
+
 
         auto end = std::chrono::steady_clock::now();
 
@@ -277,19 +293,26 @@ namespace MKV_Rendering {
 
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
-        AlembicWriter alembicWriter("correctedNormals.abc", "Hogue", (1.0 / 30.0), 0.25);
+        AlembicWriter alembicWriter("seek.abc", "Hogue", (1.0 / 30.0), 0.25);
         CameraManager cm(mkv_root_folder, structure_file_name);
         //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
 
         uint64_t timestamp = 10900000; //Approximately 11 seconds in
-        while (cm.CycleAllCamerasForward()) {
+        int i = 0;
+        while (i < 1) {
+            i++;
+            cm.AllCamerasSeekTimestamp(timestamp);
             auto alembicMesh = cm.GetMesh(&vgd);
+            
             auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
+            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
+            
+            open3d::io::WriteImageToPNG("hogue_Seek_" + std::to_string(i), *stitchedImage);
             saveMesh(legacyMesh, alembicWriter);
         }
-        
+        return;
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
@@ -301,7 +324,7 @@ namespace MKV_Rendering {
         );
 
         open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
-
+        
 
         //DrawMesh(*mesh_legacy);
         //return;

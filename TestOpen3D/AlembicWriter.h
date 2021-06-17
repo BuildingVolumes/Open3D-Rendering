@@ -21,6 +21,8 @@ struct AlembicMeshData {
 
 	std::vector<Alembic::AbcGeom::C3f> vertexColours;
 
+	size_t numUvs;
+	std::vector<Alembic::Abc::float32_t> uvs;
 };
 
 class AlembicWriter {
