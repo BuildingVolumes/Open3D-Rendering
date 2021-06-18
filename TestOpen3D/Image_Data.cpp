@@ -286,6 +286,8 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
             auto it = std::find(color_files.begin(), color_files.end(), p->second);
 
             current_frame = it - color_files.begin();
+
+            _timestamp = p->first;
         }
     }
 
@@ -308,6 +310,8 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
     }
 
     UpdateTimestamp();
+
+    std::cout << "Frame is at " << _timestamp << "\n" << std::endl;
 
     return true;
 }
@@ -358,4 +362,13 @@ void MKV_Rendering::Image_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxel
     grid->Integrate(depth, color,
         intrinsic_t, extrinsic_t,
         data->depth_scale, data->depth_max);
+}
+
+void MKV_Rendering::Image_Data::PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid)
+{
+    auto rgbd = GetFrameRGBD();
+
+    auto params = GetParameters();
+
+    grid->CarveSilhouette(rgbd->depth_, params, true);
 }

@@ -37,6 +37,8 @@ namespace MKV_Rendering {
 
 		virtual void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data) = 0;
 
+		virtual void PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid) = 0;
+
 		open3d::core::Tensor GetIntrinsic();
 		open3d::core::Tensor GetExtrinsic();
 

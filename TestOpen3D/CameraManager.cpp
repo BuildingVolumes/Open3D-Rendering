@@ -129,6 +129,25 @@ CameraManager::~CameraManager()
 
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGridData* data)
 {
+	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGrid, data).ExtractSurfaceMesh(0.0f);
+}
+
+open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelGridData *data)
+{
+	open3d::geometry::VoxelGrid grid;
+
+	grid.voxel_size_ = data->voxel_size;
+
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoOldVoxelGrid, &grid);
+	}
+
+	return grid;
+}
+
+open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGrid(VoxelGridData* data)
+{
 	open3d::core::Device device(data->device_code);
 
 	open3d::t::geometry::TSDFVoxelGrid voxel_grid(
@@ -148,10 +167,10 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGri
 		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
 	}
 
-	return voxel_grid.ExtractSurfaceMesh(0.0f);
+	return voxel_grid;
 }
 
-std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh)
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh)//, float depth_epsilon)
 {
 	//If there are no cameras, throw an error
 	if (camera_data.size() <= 0)
@@ -224,15 +243,27 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	//Iterate through all the triangles and find the normal that aligns closest to a camera
 	for (int i = 0; i < mesh->triangles_.size(); ++i)
 	{
-		double closest_sum_square_depth = DBL_MAX;
+		double highest_dot = -2.0;
+		double lowest_depth_delta = DBL_MAX;
 		int best_camera = -1;
 
 		//Currently each index should point to itself, we will force it to point elsewhere if need be
 		index_redirect.push_back(i);
 
+		//mesh->vertex_colors_[mesh->triangles_[i](0)] = Eigen::Vector3d(1, 0, 0);
+		//mesh->vertex_colors_[mesh->triangles_[i](1)] = Eigen::Vector3d(1, 0, 0);
+		//mesh->vertex_colors_[mesh->triangles_[i](2)] = Eigen::Vector3d(1, 0, 0);
+
 		for (int j = 0; j < camera_count; ++j)
 		{
-			double new_sum_square_depth = 0;
+			//Take the depth that is most facing the image
+			auto normal = (mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](1)]).cross(
+				mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](2)]
+			).normalized();
+
+			auto normal_dot = normal.dot(-camera_positions_normalized[j]);
+
+			double depth_delta = 0;
 
 			bool bad_camera = false;
 			for (int k = 0; k < 3; ++k)
@@ -249,15 +280,16 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				bool in_bounds;
 				std::tie(in_bounds, depth) = depth_images[j].FloatValueAt(uvz.x(), uvz.y());
 
-				if (!in_bounds)
+				//float delta_depth = uvz.z() - depth;
+
+				//Cull if the depth is OOB
+				if (!in_bounds)// || (delta_depth * delta_depth > depth_epsilon * depth_epsilon))
 				{
 					bad_camera = true;
 					break;
 				}
 
-				depth = uvz.z() - depth;
-				
-				new_sum_square_depth += depth * depth;
+				depth_delta += abs(depth - uvz.z());// / cos(acos(normal_dot) * 0.5f);
 			}
 
 			if (bad_camera)
@@ -265,10 +297,17 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				continue;
 			}
 
-			int lower = new_sum_square_depth < closest_sum_square_depth;
+			//if (normal_dot > highest_dot)
+			//{
+			//	highest_dot = normal_dot;
+			//	best_camera = j;
+			//}
 
-			closest_sum_square_depth = lower * new_sum_square_depth + (1 - lower) * closest_sum_square_depth;
-			best_camera = lower * j + (1 - lower) * best_camera;
+			if (lowest_depth_delta > depth_delta)
+			{
+				lowest_depth_delta = depth_delta;
+				best_camera = j;
+			}
 		}
 
 		if (best_camera == -1)
@@ -329,7 +368,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				mesh->triangles_[triangle_index](j) = vert_loc;
 
 				//Eliminate the vertex colors
-				mesh->vertex_colors_[vert_loc] = Eigen::Vector3d(0.5, 0.5, 0.5);
+				//mesh->vertex_colors_[vert_loc] = Eigen::Vector3d(0.5,1,0.5);
 
 				//Set UVs
 				Eigen::Vector3d uvz = camera_intrinsics[i] *
@@ -353,14 +392,14 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	return to_return;
 }
 
-std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp)
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp)//, float depth_epsilon)
 {
 	for (auto cam : camera_data)
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 	}
 
-	return CreateUVMapAndTexture(mesh);
+	return CreateUVMapAndTexture(mesh);// , depth_epsilon);
 }
 
 bool MKV_Rendering::CameraManager::CycleAllCamerasForward()
@@ -401,6 +440,11 @@ bool MKV_Rendering::CameraManager::AllCamerasSeekTimestamp(uint64_t timestamp)
 
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp)
 {
+	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGridAtTimestamp, data, timestamp).ExtractSurfaceMesh(0.0f);
+}
+
+open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGridAtTimestamp(VoxelGridData* data, uint64_t timestamp)
+{
 	open3d::core::Device device(data->device_code);
 
 	open3d::t::geometry::TSDFVoxelGrid voxel_grid(
@@ -422,7 +466,7 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMeshAtTimesta
 		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
 	}
 
-	return voxel_grid.ExtractSurfaceMesh(0.0f);
+	return voxel_grid;
 }
 
 std::vector<open3d::geometry::RGBDImage> MKV_Rendering::CameraManager::ExtractImageVectorAtTimestamp(uint64_t timestamp)

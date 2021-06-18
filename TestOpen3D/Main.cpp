@@ -73,6 +73,19 @@ namespace MKV_Rendering {
         writer.close();
     }
 
+    template<class T>
+    void DrawObject(T& object_to_draw)
+    {
+        std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
+
+        auto object_ptr = std::make_shared<T>(
+            object_to_draw);
+
+        to_draw.push_back(object_ptr);
+
+        visualization::DrawGeometries(to_draw);
+    }
+
     void DrawMesh(geometry::TriangleMesh &object_to_draw)
     {
         std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
@@ -186,14 +199,25 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-        //CameraManager cm(mkv_root_folder, structure_file_name);
-        CameraManager cm(images_root_folder, structure_file_name);
+        CameraManager cm(mkv_root_folder, structure_file_name);
+        //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
+        //vgd.voxel_size = 9.f / 512.f;
 
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        //uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 7900000; //Approximately 8 seconds in
 
         //cm.CreateSSMVFolder(&vgd, "SSMV_Data", timestamp);
+        //return;
+
+        //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
+        //
+        //std::cout << old_grid.HasVoxels() << std::endl;
+        //std::cout << old_grid.HasColors() << std::endl;
+        //
+        //DrawObject(old_grid);
+        //
         //return;
 
         auto mesh = ErrorLogger::EXECUTE(
@@ -202,9 +226,15 @@ namespace MKV_Rendering {
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
 
+        //mesh_legacy = mesh_legacy->FilterSmoothSimple(5);
+        //mesh_legacy = mesh_legacy->FilterSmoothLaplacian(25, 0.3);
+        //mesh_legacy = mesh_legacy->FilterSmoothTaubin(25);
+
         auto stitched_image = ErrorLogger::EXECUTE(
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
         );
+
+        DrawMesh(*mesh_legacy);
 
         open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
 

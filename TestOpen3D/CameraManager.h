@@ -22,9 +22,13 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
-		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh);
+		open3d::geometry::VoxelGrid GetOldVoxelGrid(VoxelGridData* data);
 
-		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh *mesh, uint64_t timestamp);
+		open3d::t::geometry::TSDFVoxelGrid GetVoxelGrid(VoxelGridData* data);
+
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh);//, float depth_epsilon = 0.01f);
+
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp);// , float depth_epsilon);
 
 		bool CycleAllCamerasForward();
 
@@ -33,6 +37,8 @@ namespace MKV_Rendering {
 		bool AllCamerasSeekTimestamp(uint64_t timestamp);
 
 		open3d::t::geometry::TriangleMesh GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp);
+
+		open3d::t::geometry::TSDFVoxelGrid GetVoxelGridAtTimestamp(VoxelGridData* data, uint64_t timestamp);
 
 		std::vector<open3d::geometry::RGBDImage> ExtractImageVectorAtTimestamp(uint64_t timestamp);
 

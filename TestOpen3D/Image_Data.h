@@ -53,5 +53,7 @@ namespace MKV_Rendering {
 		open3d::camera::PinholeCameraParameters GetParameters();
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
+
+		void PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid);
 	};
 }
