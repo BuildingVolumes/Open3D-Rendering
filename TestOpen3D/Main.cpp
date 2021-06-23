@@ -252,12 +252,6 @@ namespace MKV_Rendering {
 
         auto toDraw = t::geometry::Image(result[t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap]).ToLegacyImage();
 
-        auto toDraw = RaycastVoxelGrid(&vg, &vgd,
-            eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
-            intrinsic_tensor,
-            cm.GetImageWidth(), cm.GetImageHeight()
-        );
-
         DrawObject(toDraw);
 
         return;
