@@ -18,10 +18,13 @@
 #include <memory>
 #include <turbojpeg.h>
 
+#include <uvpCore.hpp>
+
 using namespace open3d;
 using namespace open3d::core;
 using namespace open3d::io;
 using namespace Eigen;
+using namespace uvpcore;
 
 namespace MKV_Rendering {
     void WriteOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh)
@@ -191,6 +194,8 @@ namespace MKV_Rendering {
 
         double FPS = 0;// 30;
 
+        UvpOperationInputT inputUVP;
+
         //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
         //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
         //
@@ -220,6 +225,47 @@ namespace MKV_Rendering {
         //
         //return;
 
+        auto vg = ErrorLogger::EXECUTE(
+            "Generate Voxel Grid", &cm, &CameraManager::GetVoxelGridAtTimestamp, &vgd, timestamp
+        );
+
+        Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
+
+        transformation.translate(Eigen::Vector3d(0, 0, -3));
+
+        camera::PinholeCameraIntrinsic intrinsic = camera::PinholeCameraIntrinsic(
+            camera::PinholeCameraIntrinsicParameters::PrimeSenseDefault);
+
+        auto focal_length = intrinsic.GetFocalLength();
+        auto principal_point = intrinsic.GetPrincipalPoint();
+        auto intrinsic_tensor = Tensor::Init<double>(
+            { {focal_length.first, 0, principal_point.first},
+             {0, focal_length.second, principal_point.second},
+             {0, 0, 1} });
+
+        auto result = vg.RayCast(
+            intrinsic_tensor, eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
+            cm.GetImageWidth(), cm.GetImageHeight(),
+            vgd.depth_scale, 0.1f, vgd.depth_max, 3.0f, 
+            t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap
+        );
+
+        auto toDraw = t::geometry::Image(result[t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap]).ToLegacyImage();
+
+        auto toDraw = RaycastVoxelGrid(&vg, &vgd,
+            eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
+            intrinsic_tensor,
+            cm.GetImageWidth(), cm.GetImageHeight()
+        );
+
+        DrawObject(toDraw);
+
+        return;
+
+
+
+
+
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
@@ -234,7 +280,7 @@ namespace MKV_Rendering {
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
         );
 
-        DrawMesh(*mesh_legacy);
+        DrawObject(*mesh_legacy);
 
         open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
 

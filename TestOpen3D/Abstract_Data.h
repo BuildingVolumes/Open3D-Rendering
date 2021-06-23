@@ -23,6 +23,9 @@ namespace MKV_Rendering {
 		std::string folder_name;
 
 		uint64_t _timestamp = 0;
+
+		int imageHeight = 0;
+		int imageWidth = 0;
 	public:
 		Abstract_Data(std::string my_folder);
 
@@ -46,5 +49,9 @@ namespace MKV_Rendering {
 		Eigen::Matrix3d GetIntrinsicMat() { return intrinsic_mat; }
 
 		uint64_t GetTimestampCached() { return _timestamp; }
+
+		int GetImageHeight() { return imageHeight; }
+
+		int GetImageWidth() { return imageWidth; }
 	};
 }

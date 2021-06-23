@@ -264,6 +264,9 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     int width = k4a_image_get_width_pixels(k4a_color);
     int height = k4a_image_get_height_pixels(k4a_color);
 
+    imageWidth = width;
+    imageHeight = height;
+
     /* resize */
     rgbd_buffer->color_.Prepare(width, height, 3, sizeof(uint8_t));
     color_buffer->Prepare(width, height, 4, sizeof(uint8_t));
@@ -335,6 +338,8 @@ MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string cali
     transform = k4a_transformation_create(&calibration);
 
     ErrorLogger::EXECUTE("Set Capture To First Frame", this, &MKV_Data::CycleCaptureForwards);
+
+    ErrorLogger::EXECUTE("Decompressing Capture", this, &MKV_Data::DecompressCapture);
 }
 
 MKV_Data::~MKV_Data()

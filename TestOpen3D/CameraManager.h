@@ -54,5 +54,9 @@ namespace MKV_Rendering {
 		uint64_t GetHighestTimestamp();
 
 		void MakeAnErrorOnPurpose(bool cause_abort);
+
+		int GetImageHeight() { return camera_data[0]->GetImageHeight(); }
+		
+		int GetImageWidth() { return camera_data[0]->GetImageWidth(); }
 	};
 }

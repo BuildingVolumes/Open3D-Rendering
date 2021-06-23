@@ -217,6 +217,11 @@ MKV_Rendering::Image_Data::Image_Data(std::string root_folder, std::string color
     ErrorLogger::EXECUTE("Create Intrinsic Tensor", this, &Image_Data::GetIntrinsicTensor);
     ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &Image_Data::GetExtrinsicTensor);
 
+    auto im = open3d::t::io::CreateImageFromFile(color_files[current_frame]);
+
+    int imageWidth = im->GetCols();
+    int imageHeight = im->GetRows();
+
     transform = k4a_transformation_create(&calibration);
 }
 
