@@ -22,6 +22,7 @@ namespace MKV_Rendering {
 		k4a_capture_t* capture = nullptr;
 
 		std::vector<uint8_t> playback_data;
+		uint64_t start_offset = 0;
 
 		void Initialize(std::string my_folder, std::string mkv_name, std::string calibration_name);
 		void Calibrate();
@@ -36,6 +37,8 @@ namespace MKV_Rendering {
 		MKV_Data(std::string my_folder, std::string preferred_mkv_name, std::string preferred_calibration_name);
 		~MKV_Data();
 
+		uint64_t GetStartOffset() { return start_offset; }
+
 		uint64_t GetCaptureTimestamp();
 		bool CycleCaptureForwards();
 		bool CycleCaptureBackwards();
@@ -48,6 +51,8 @@ namespace MKV_Rendering {
 		void WriteIntrinsics(std::string filename);
 
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
+
+		void PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid);
 	};
 }
 

@@ -87,6 +87,10 @@ void MKV_Data::Calibrate()
     default:
         ErrorLogger::LOG_ERROR("Bad record configuration on: " + mkv_file, true);
     }
+    
+    start_offset = record_config.start_timestamp_offset_usec;
+
+    std::cout << "Start Offset: " << start_offset << std::endl;
 }
 
 void MKV_Data::GetPlaybackDataRaw()
@@ -260,6 +264,9 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     int width = k4a_image_get_width_pixels(k4a_color);
     int height = k4a_image_get_height_pixels(k4a_color);
 
+    imageWidth = width;
+    imageHeight = height;
+
     /* resize */
     rgbd_buffer->color_.Prepare(width, height, 3, sizeof(uint8_t));
     color_buffer->Prepare(width, height, 4, sizeof(uint8_t));
@@ -331,6 +338,8 @@ MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string cali
     transform = k4a_transformation_create(&calibration);
 
     ErrorLogger::EXECUTE("Set Capture To First Frame", this, &MKV_Data::CycleCaptureForwards);
+
+    ErrorLogger::EXECUTE("Decompressing Capture", this, &MKV_Data::DecompressCapture);
 }
 
 MKV_Data::~MKV_Data()
@@ -451,7 +460,7 @@ bool MKV_Data::SeekToTime(uint64_t time)
     *capture = NULL;
 
     if (k4a_result_t::K4A_RESULT_SUCCEEDED !=
-        k4a_playback_seek_timestamp(handle, time, k4a_playback_seek_origin_t::K4A_PLAYBACK_SEEK_BEGIN))
+        k4a_playback_seek_timestamp(handle, time, k4a_playback_seek_origin_t::K4A_PLAYBACK_SEEK_DEVICE_TIME))
     {
         ErrorLogger::LOG_ERROR("Problem seeking timestamp on: " + mkv_file);
         return false;
@@ -471,6 +480,8 @@ bool MKV_Data::SeekToTime(uint64_t time)
         _timestamp = ErrorLogger::EXECUTE("Retrieving Capture Timestamp", this, &MKV_Data::GetCaptureTimestamp);
         break;
     }
+
+    std::cout << "Seeking to " << _timestamp << std::endl;
 
     return true;
 }
@@ -537,4 +548,16 @@ void MKV_Rendering::MKV_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGr
     grid->Integrate(depth, color,
         intrinsic_t, extrinsic_t,
         data->depth_scale, data->depth_max);
+}
+
+void MKV_Rendering::MKV_Data::PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid)
+{
+    if (calibration_file == "")
+        ErrorLogger::LOG_ERROR("No calibration present on " + folder_name + "!", true);
+
+    auto rgbd = GetFrameRGBD();
+
+    auto params = GetParameters();
+
+    grid->CarveSilhouette(rgbd->depth_, params, true);
 }

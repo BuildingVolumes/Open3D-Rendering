@@ -23,11 +23,13 @@
 
 
 #include <chrono>
+#include <uvpCore.hpp>
 
 using namespace open3d;
 using namespace open3d::core;
 using namespace open3d::io;
 using namespace Eigen;
+using namespace uvpcore;
 
 namespace MKV_Rendering {
     void WriteOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh)
@@ -77,6 +79,19 @@ namespace MKV_Rendering {
         }
 
         writer.close();
+    }
+
+    template<class T>
+    void DrawObject(T& object_to_draw)
+    {
+        std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
+
+        auto object_ptr = std::make_shared<T>(
+            object_to_draw);
+
+        to_draw.push_back(object_ptr);
+
+        visualization::DrawGeometries(to_draw);
     }
 
     void DrawMesh(geometry::TriangleMesh &object_to_draw)
@@ -278,7 +293,8 @@ namespace MKV_Rendering {
 
         double FPS = 0;// 30;
 
-        
+        UvpOperationInputT inputUVP;
+
         //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
         //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
         //
@@ -295,6 +311,14 @@ namespace MKV_Rendering {
 
         
         //CameraManager cm(images_root_folder, structure_file_name);
+        //CameraManager cm(mkv_root_folder, structure_file_name);
+        //CameraManager cm(images_root_folder, structure_file_name);
+
+        VoxelGridData vgd; //Edit values to toy with voxel grid settings
+        //vgd.voxel_size = 9.f / 512.f;
+
+        //uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 7900000; //Approximately 8 seconds in
 
         AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
@@ -318,15 +342,65 @@ namespace MKV_Rendering {
         uint64_t highTime = cm.GetHighestTimestamp();
 
         alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime)  / ((float)i * 1000000.0f));
+        //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
+        //
+        //std::cout << old_grid.HasVoxels() << std::endl;
+        //std::cout << old_grid.HasColors() << std::endl;
+        //
+        //DrawObject(old_grid);
+        //
+        //return;
+
+        auto vg = ErrorLogger::EXECUTE(
+            "Generate Voxel Grid", &cm, &CameraManager::GetVoxelGridAtTimestamp, &vgd, timestamp
+        );
+
+        Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
+
+        transformation.translate(Eigen::Vector3d(0, 0, -3));
+
+        camera::PinholeCameraIntrinsic intrinsic = camera::PinholeCameraIntrinsic(
+            camera::PinholeCameraIntrinsicParameters::PrimeSenseDefault);
+
+        auto focal_length = intrinsic.GetFocalLength();
+        auto principal_point = intrinsic.GetPrincipalPoint();
+        auto intrinsic_tensor = Tensor::Init<double>(
+            { {focal_length.first, 0, principal_point.first},
+             {0, focal_length.second, principal_point.second},
+             {0, 0, 1} });
+
+        auto result = vg.RayCast(
+            intrinsic_tensor, eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
+            cm.GetImageWidth(), cm.GetImageHeight(),
+            vgd.depth_scale, 0.1f, vgd.depth_max, 3.0f, 
+            t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap
+        );
+
+        auto toDraw = t::geometry::Image(result[t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap]).ToLegacyImage();
+
+        DrawObject(toDraw);
+
+        return;
+
+
+
+
+
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
 
+        //mesh_legacy = mesh_legacy->FilterSmoothSimple(5);
+        //mesh_legacy = mesh_legacy->FilterSmoothLaplacian(25, 0.3);
+        //mesh_legacy = mesh_legacy->FilterSmoothTaubin(25);
+
         auto stitched_image = ErrorLogger::EXECUTE(
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
         );
+
+        DrawObject(*mesh_legacy);
 
         open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
         
