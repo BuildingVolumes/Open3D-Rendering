@@ -10,10 +10,19 @@ void AlembicWriter::setFloatParameter(Alembic::AbcMaterial::OMaterialSchema sche
 	prop.set(value);
 }
 
+
+void AlembicWriter::setTimeSampling(float start, float delta) {
+	g_ts = Alembic::AbcGeom::TimeSamplingPtr(new Alembic::AbcGeom::TimeSampling(delta, start));
+	mesh.setTimeSampling(g_ts);
+}
+
 AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float start, float delta) {
 	startTime = start;
 	deltaTime = delta;
-	g_ts = Alembic::AbcGeom::TimeSamplingPtr(new Alembic::AbcGeom::TimeSampling(deltaTime, startTime));
+	
+	//g_ts = Alembic::AbcGeom::TimeSamplingPtr(new Alembic::AbcGeom::TimeSampling(deltaTime, startTime));
+	
+
 
 	this->fileName = fileName;
 	this->topName = topName;
@@ -22,11 +31,13 @@ AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float st
 	top = archive.getTop();
 	//Alembic::AbcGeom::v12::OXform xform(top, this->topName, g_ts);
 
+	
 
 
-
-	meshNode = Alembic::AbcGeom::v12::OPolyMesh(top, "meshy", g_ts);
+	meshNode = Alembic::AbcGeom::v12::OPolyMesh(top, "meshy");
+	
 	mesh = meshNode.getSchema();
+	
 	/*
 	Alembic::AbcMaterial::OMaterial material(meshNode, "material");
 	std::cout << material.getFullName() << std::endl;
@@ -45,21 +56,20 @@ AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float st
 		true, Alembic::AbcGeom::v12::GeometryScope::kVertexScope, 1);
 	
 
-	//Alembic::AbcMaterial::OMaterial materialA(meshNode, "materialA");
-
-
+	
+	/*
+	materialsNode = Alembic::Abc::OObject(top, "materials");
+	Alembic::AbcMaterial::OMaterial materialA(materialsNode, "materialA");
+	materialA.getSchema().setShader("unity", "surface", "standard");
 	//setFloatParameter(materialA.getSchema(), "opengl", "surface", "roughness", 0.1f);
-	//Alembic::AbcMaterial::addMaterialAssignment(meshNode, "/meshy/materialA");
-	//Alembic::AbcMaterial::addMaterialAssignment(mesh, "/meshy/material");
+	
+	
+	//Alembic::AbcMaterial::addMaterialAssignment(meshNode, "/materials/material");
+	*/
+	
 }
 
 void AlembicWriter::saveFrame(struct AlembicMeshData meshData) {
-
-
-
-	
-
-
 	Alembic::AbcGeom::v12::OV2fGeomParam::Sample UVs(Alembic::AbcGeom::v12::V2fArraySample((const Alembic::AbcGeom::v12::V2f*)meshData.uvs.data(),
 		meshData.numUvs), Alembic::AbcGeom::v12::kFacevaryingScope);
 
@@ -75,17 +85,15 @@ void AlembicWriter::saveFrame(struct AlembicMeshData meshData) {
 		Alembic::AbcGeom::v12::Int32ArraySample(meshData.counts.data(), meshData.numCounts));
 
 	
-
-
-	
+	/*
 	Alembic::AbcGeom::OC3fGeomParam::Sample colourParam(Alembic::AbcGeom::C3fArraySample(meshData.vertexColours),
 		Alembic::AbcGeom::v12::GeometryScope::kVertexScope);
-
+	*/
 
 	
 
-
-	colourProps.set(colourParam);
+	//Alembic::AbcMaterial::addMaterialAssignment(mesh, "/materials/materialA");
+	//colourProps.set(colourParam);
 	
 	g_meshsamp.setNormals(normals);
 
@@ -93,4 +101,6 @@ void AlembicWriter::saveFrame(struct AlembicMeshData meshData) {
 	
 	mesh.set(g_meshsamp);
 
+	
+	
 }

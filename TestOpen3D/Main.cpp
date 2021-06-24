@@ -192,13 +192,6 @@ namespace MKV_Rendering {
 
         meshData.vertexColours = toAlembicColour(object_to_draw.vertex_colors_);
 
-
-
-
-        auto end = std::chrono::steady_clock::now();
-
-        std::chrono::duration<double> elapsed_seconds = end - start;
-        std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
         alembicWriter.saveFrame(meshData);
 
     }
@@ -293,26 +286,38 @@ namespace MKV_Rendering {
 
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
-        AlembicWriter alembicWriter("seek.abc", "Hogue", (1.0 / 30.0), 0.25);
+
+        
+        
         CameraManager cm(mkv_root_folder, structure_file_name);
+
+        uint64_t lowTime = cm.GetHighestTimestamp();
+
+        
         //CameraManager cm(images_root_folder, structure_file_name);
 
+        AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
-
+        vgd.voxel_size = 9.0f/512.0f;
         uint64_t timestamp = 10900000; //Approximately 11 seconds in
         int i = 0;
-        while (i < 1) {
-            i++;
-            cm.AllCamerasSeekTimestamp(timestamp);
+        while (cm.CycleAllCamerasForward()) {
+           
+            
             auto alembicMesh = cm.GetMesh(&vgd);
             
             auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
             auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
             
-            open3d::io::WriteImageToPNG("hogue_Seek_" + std::to_string(i), *stitchedImage);
-            saveMesh(legacyMesh, alembicWriter);
+            //open3d::io::WriteImageToPNG("outputData/texture" + std::to_string(i) +".png", *stitchedImage);
+            if (&alembicMesh != nullptr) {
+                saveMesh(legacyMesh, alembicWriter);
+            }
+            i++;
         }
-        return;
+        uint64_t highTime = cm.GetHighestTimestamp();
+
+        alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime)  / ((float)i * 1000000.0f));
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );

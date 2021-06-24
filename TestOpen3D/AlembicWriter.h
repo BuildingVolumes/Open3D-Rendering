@@ -60,4 +60,6 @@ public:
 
 	//Call saveFrame and pass in the data for the frame to save it
 	void saveFrame(struct AlembicMeshData meshData);
+
+	void setTimeSampling(float start, float delta);
 };
