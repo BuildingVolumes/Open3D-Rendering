@@ -117,7 +117,6 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
-<<<<<<< HEAD
     void RaycastVoxelGrid(t::geometry::TSDFVoxelGrid& vg, CameraManager &cm, VoxelGridData &vgd)
     {
         Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
@@ -146,7 +145,6 @@ namespace MKV_Rendering {
         DrawObject(toDraw);
     }
 
-=======
     std::vector<Alembic::Abc::float32_t> double3ToAlembic(std::vector<Eigen::Vector3d> source) {
         std::vector<Alembic::Abc::float32_t> result;
         result.resize(source.size()*3); //source stores each element as  (x,y,z) while result stores it sequently
@@ -241,8 +239,6 @@ namespace MKV_Rendering {
 
     }
 
-
->>>>>>> eb57f55f8bc5e11098371c97cd6c6039699842f6
     //Currently skipping frames for some reason
     void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
     {
@@ -336,23 +332,10 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-<<<<<<< HEAD
         CameraManager cm;
         //ErrorLogger::EXECUTE("Load MKV Files", &cm, &CameraManager::LoadTypeStructure, mkv_root_folder, structure_file_name);
         //ErrorLogger::EXECUTE("Load Image Files", &cm, &CameraManager::LoadTypeStructure, images_root_folder, structure_file_name);
         ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
-=======
-        
-        
-        CameraManager cm(mkv_root_folder, structure_file_name);
-
-        uint64_t lowTime = cm.GetHighestTimestamp();
-
-        
-        //CameraManager cm(images_root_folder, structure_file_name);
-        //CameraManager cm(mkv_root_folder, structure_file_name);
-        //CameraManager cm(images_root_folder, structure_file_name);
->>>>>>> eb57f55f8bc5e11098371c97cd6c6039699842f6
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
         //vgd.voxel_size = 9.f / 512.f;
