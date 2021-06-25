@@ -36,6 +36,7 @@
     <ClCompile Include="Abstract_Data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AlembicWriter.cpp">
     <ClCompile Include="TextureUnpacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -68,6 +69,7 @@
     <ClInclude Include="ColorMapOptimizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AlembicWriter.h">
     <ClInclude Include="TextureUnpacker.h">
       <Filter>Header Files</Filter>
     </ClInclude>

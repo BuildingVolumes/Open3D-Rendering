@@ -11,6 +11,9 @@
 #include "open3d/geometry/RGBDImage.h"
 #include "ColorMapOptimizer.h"
 
+
+#include "AlembicWriter.h"
+
 #include <k4a/k4a.h>
 #include <k4arecord/record.h>
 #include <fstream>
@@ -18,6 +21,8 @@
 #include <memory>
 #include <turbojpeg.h>
 
+
+#include <chrono>
 #include <uvpCore.hpp>
 
 using namespace open3d;
@@ -97,7 +102,6 @@ namespace MKV_Rendering {
             object_to_draw);
 
         to_draw.push_back(object_ptr);
-
         visualization::DrawGeometries(to_draw);
     }
 
@@ -113,6 +117,7 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+<<<<<<< HEAD
     void RaycastVoxelGrid(t::geometry::TSDFVoxelGrid& vg, CameraManager &cm, VoxelGridData &vgd)
     {
         Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
@@ -141,6 +146,103 @@ namespace MKV_Rendering {
         DrawObject(toDraw);
     }
 
+=======
+    std::vector<Alembic::Abc::float32_t> double3ToAlembic(std::vector<Eigen::Vector3d> source) {
+        std::vector<Alembic::Abc::float32_t> result;
+        result.resize(source.size()*3); //source stores each element as  (x,y,z) while result stores it sequently
+
+        #pragma omp parallel
+        #pragma omp for
+        for (int i = 0; i < source.size(); i++) {
+            result[i * 3 + 0] = source[i].x();
+            result[i * 3 + 1] = source[i].y();
+            result[i * 3 + 2] = source[i].z();
+        }
+
+        return result;
+    }
+
+    std::vector<Alembic::Abc::float32_t> double3ToAlembicNegate(std::vector<Eigen::Vector3d> source) {
+        std::vector<Alembic::Abc::float32_t> result;
+        result.resize(source.size() * 3); //source stores each element as  (x,y,z) while result stores it sequently
+
+        #pragma omp parallel
+        #pragma omp for
+        for (int i = 0; i < source.size(); i++) {
+            result[i * 3 + 0] = source[i].x();
+            result[i * 3 + 1] = source[i].y();
+            result[i * 3 + 2] = source[i].z();
+        }
+
+        return result;
+    }
+
+    std::vector<Alembic::Abc::C3f> toAlembicColour(std::vector<Eigen::Vector3d> source) {
+        std::vector<Alembic::Abc::C3f> result;
+        result.resize(source.size());
+        for (int i = 0; i < source.size(); i++) {
+            result[i].x = source[i].x();
+            result[i].y = source[i].y();
+            result[i].z = source[i].z();
+        }
+
+        return result;
+    }
+
+    std::vector< Alembic::Abc::float32_t> toAlembicUVs(std::vector<Eigen::Vector2d> source) {
+        std::vector<Alembic::Abc::float32_t> result;
+        result.resize(source.size()*2);
+        for (int i = 0; i < source.size(); i++) {
+            result[i*2+0] = source[i].x();
+            result[i*2+1] = source[i].y();
+        }
+
+        return result;
+    }
+    void saveMesh(geometry::TriangleMesh& object_to_draw, AlembicWriter& alembicWriter) {
+        AlembicMeshData meshData;
+
+        auto start = std::chrono::steady_clock::now();
+        meshData.vertices = double3ToAlembic(object_to_draw.vertices_);
+        meshData.numVerts = meshData.vertices.size() /3;
+        
+        meshData.numIndicies = object_to_draw.triangles_.size() * 3;
+        meshData.indicies.resize(meshData.numIndicies);
+        
+        
+        
+
+        #pragma omp parallel
+        #pragma omp for
+        for (int i = 0; i < meshData.numIndicies/3; i++) {
+            meshData.indicies[i * 3 + 0] = object_to_draw.triangles_[i].x();
+            meshData.indicies[i * 3 + 1] = object_to_draw.triangles_[i].z();
+            meshData.indicies[i * 3 + 2] = object_to_draw.triangles_[i].y();
+        }
+
+        meshData.numCounts = meshData.numIndicies / 3;
+        meshData.counts.resize(meshData.numCounts);
+
+        #pragma omp parallel
+        #pragma omp for
+        for (int i = 0; i < meshData.numCounts; i++) {
+            meshData.counts[i] = 3;
+        }
+
+        meshData.normals = double3ToAlembicNegate(object_to_draw.vertex_normals_);
+        meshData.numNormals = meshData.normals.size() / 3;
+
+        meshData.uvs = toAlembicUVs(object_to_draw.triangle_uvs_);
+        meshData.numUvs = object_to_draw.triangle_uvs_.size();
+
+        meshData.vertexColours = toAlembicColour(object_to_draw.vertex_colors_);
+
+        alembicWriter.saveFrame(meshData);
+
+    }
+
+
+>>>>>>> eb57f55f8bc5e11098371c97cd6c6039699842f6
     //Currently skipping frames for some reason
     void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
     {
@@ -234,10 +336,23 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
+<<<<<<< HEAD
         CameraManager cm;
         //ErrorLogger::EXECUTE("Load MKV Files", &cm, &CameraManager::LoadTypeStructure, mkv_root_folder, structure_file_name);
         //ErrorLogger::EXECUTE("Load Image Files", &cm, &CameraManager::LoadTypeStructure, images_root_folder, structure_file_name);
         ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
+=======
+        
+        
+        CameraManager cm(mkv_root_folder, structure_file_name);
+
+        uint64_t lowTime = cm.GetHighestTimestamp();
+
+        
+        //CameraManager cm(images_root_folder, structure_file_name);
+        //CameraManager cm(mkv_root_folder, structure_file_name);
+        //CameraManager cm(images_root_folder, structure_file_name);
+>>>>>>> eb57f55f8bc5e11098371c97cd6c6039699842f6
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
         //vgd.voxel_size = 9.f / 512.f;
@@ -246,9 +361,28 @@ namespace MKV_Rendering {
         //uint64_t timestamp = 7900000; //Approximately 8 seconds in
         uint64_t timestamp = 1999999; //Approximately 2 seconds in
 
-        //cm.CreateSSMVFolder(&vgd, "SSMV_Data", timestamp);
-        //return;
+        AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
+        VoxelGridData vgd; //Edit values to toy with voxel grid settings
+        vgd.voxel_size = 9.0f/512.0f;
+        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        int i = 0;
+        while (cm.CycleAllCamerasForward()) {
+           
+            
+            auto alembicMesh = cm.GetMesh(&vgd);
+            
+            auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
+            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
+            
+            //open3d::io::WriteImageToPNG("outputData/texture" + std::to_string(i) +".png", *stitchedImage);
+            if (&alembicMesh != nullptr) {
+                saveMesh(legacyMesh, alembicWriter);
+            }
+            i++;
+        }
+        uint64_t highTime = cm.GetHighestTimestamp();
 
+        alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime)  / ((float)i * 1000000.0f));
         //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
         //
         //std::cout << old_grid.HasVoxels() << std::endl;
@@ -283,31 +417,16 @@ namespace MKV_Rendering {
         DrawObject(*mesh_legacy);
 
         open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
-
-        //auto images = ErrorLogger::EXECUTE("Extract RGBD Images", &cm, &CameraManager::ExtractImageVectorAtTimestamp, timestamp);
-        //
-        //auto options = open3d::pipelines::color_map::NonRigidOptimizerOption();
-        //options.maximum_iteration_ = 100;
-        //options.debug_output_dir_ = "NonRigidDebug";
-        //
-        //auto trajectory = open3d::camera::PinholeCameraTrajectory();
-        //ErrorLogger::EXECUTE("Get Trajectories", &cm, &CameraManager::GetTrajectories, trajectory);
-
-        //auto optimized_mesh = NRColorOptimization(*mesh_legacy,
-        //        images, trajectory, options
-        //        );
-
-        //open3d::io::WriteTriangleMesh("TexturedMeshTest.obj", *mesh_legacy);
+        
 
         //DrawMesh(*mesh_legacy);
         //return;
 
-        WriteOBJ("TexturedMeshTest.obj", "", &(*mesh_legacy));
-
-        //DrawMesh(optimized_mesh);
-
+  
         //ErrorLogger::EXECUTE("Test Error Logging", &cm, &CameraManager::MakeAnErrorOnPurpose, true);
     }
+
+    
 }
 
 
@@ -346,5 +465,6 @@ int render_kinect(int argc, char** argv)
 int main() {
     ErrorLogger::EXECUTE("Refactored Code Test", &MKV_Rendering::refactored_code_test);
 
+    
     return 0;
 }
