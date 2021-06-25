@@ -113,6 +113,34 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+    void RaycastVoxelGrid(t::geometry::TSDFVoxelGrid& vg, CameraManager &cm, VoxelGridData &vgd)
+    {
+        Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
+
+        transformation.translate(Eigen::Vector3d(0, 0, -3));
+
+        camera::PinholeCameraIntrinsic intrinsic = camera::PinholeCameraIntrinsic(
+            camera::PinholeCameraIntrinsicParameters::PrimeSenseDefault);
+
+        auto focal_length = intrinsic.GetFocalLength();
+        auto principal_point = intrinsic.GetPrincipalPoint();
+        auto intrinsic_tensor = Tensor::Init<double>(
+            { {focal_length.first, 0, principal_point.first},
+             {0, focal_length.second, principal_point.second},
+             {0, 0, 1} });
+
+        auto result = vg.RayCast(
+            intrinsic_tensor, eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
+            cm.GetImageWidth(), cm.GetImageHeight(),
+            vgd.depth_scale, 0.1f, vgd.depth_max, 3.0f,
+            t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap
+        );
+
+        auto toDraw = t::geometry::Image(result[t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap]).ToLegacyImage();
+
+        DrawObject(toDraw);
+    }
+
     //Currently skipping frames for some reason
     void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
     {
@@ -191,10 +219,12 @@ namespace MKV_Rendering {
         std::string mkv_root_folder = "Kinect Test 1";
         std::string images_root_folder = "Kinect Test 2";
         std::string structure_file_name = ".structure";
+        std::string livescan_root_folder = "syncnew_3";
 
-        double FPS = 0;// 30;
-
-        UvpOperationInputT inputUVP;
+        double FPS = 
+            24;
+            // 0;
+            // 30;
 
         //Use this to create a set of folders that are usable to construct a voxel grid from images instead of mkvs. No further setup should be required for them.
         //SaveMKVDataForImages(99999999, mkv_root_folder, images_root_folder, "intrinsic", "calib", "COLOR", "DEPTH", FPS);
@@ -204,14 +234,17 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-        CameraManager cm(mkv_root_folder, structure_file_name);
-        //CameraManager cm(images_root_folder, structure_file_name);
+        CameraManager cm;
+        //ErrorLogger::EXECUTE("Load MKV Files", &cm, &CameraManager::LoadTypeStructure, mkv_root_folder, structure_file_name);
+        //ErrorLogger::EXECUTE("Load Image Files", &cm, &CameraManager::LoadTypeStructure, images_root_folder, structure_file_name);
+        ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
         //vgd.voxel_size = 9.f / 512.f;
 
         //uint64_t timestamp = 10900000; //Approximately 11 seconds in
-        uint64_t timestamp = 7900000; //Approximately 8 seconds in
+        //uint64_t timestamp = 7900000; //Approximately 8 seconds in
+        uint64_t timestamp = 1999999; //Approximately 2 seconds in
 
         //cm.CreateSSMVFolder(&vgd, "SSMV_Data", timestamp);
         //return;
@@ -229,36 +262,9 @@ namespace MKV_Rendering {
             "Generate Voxel Grid", &cm, &CameraManager::GetVoxelGridAtTimestamp, &vgd, timestamp
         );
 
-        Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
-
-        transformation.translate(Eigen::Vector3d(0, 0, -3));
-
-        camera::PinholeCameraIntrinsic intrinsic = camera::PinholeCameraIntrinsic(
-            camera::PinholeCameraIntrinsicParameters::PrimeSenseDefault);
-
-        auto focal_length = intrinsic.GetFocalLength();
-        auto principal_point = intrinsic.GetPrincipalPoint();
-        auto intrinsic_tensor = Tensor::Init<double>(
-            { {focal_length.first, 0, principal_point.first},
-             {0, focal_length.second, principal_point.second},
-             {0, 0, 1} });
-
-        auto result = vg.RayCast(
-            intrinsic_tensor, eigen_converter::EigenMatrixToTensor(transformation.inverse().matrix()),
-            cm.GetImageWidth(), cm.GetImageHeight(),
-            vgd.depth_scale, 0.1f, vgd.depth_max, 3.0f, 
-            t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap
-        );
-
-        auto toDraw = t::geometry::Image(result[t::geometry::TSDFVoxelGrid::SurfaceMaskCode::ColorMap]).ToLegacyImage();
-
-        DrawObject(toDraw);
-
-        return;
-
-
-
-
+        //RaycastVoxelGrid(vg, cm, vgd);
+        //
+        //return;
 
         auto mesh = ErrorLogger::EXECUTE(
             "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp

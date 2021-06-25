@@ -12,13 +12,21 @@ namespace MKV_Rendering {
 	class CameraManager {
 		std::vector<Abstract_Data*> camera_data;
 
+		bool loaded = false;
+
 		void CauseError(bool cause_abort);
 
 		void LoadStructure(std::string structure_path, std::map<std::string, std::string> *data);
 	public:
-		CameraManager(std::string root_folder, std::string structure_file_name);
+		CameraManager();
+
+		bool LoadTypeStructure(std::string root_folder, std::string structure_file_name);
+
+		bool LoadTypeLivescan(std::string root_folder, float FPS);
 
 		~CameraManager();
+
+		bool Unload();
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
