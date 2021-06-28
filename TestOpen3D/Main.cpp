@@ -285,6 +285,53 @@ namespace MKV_Rendering {
         }
     }
 
+
+    void alembicCode() {
+        std::string mkv_root_folder = "Kinect Test 1";
+        std::string images_root_folder = "Kinect Test 2";
+        std::string structure_file_name = ".structure";
+
+        double FPS = 0;// 30;
+
+
+        CameraManager cm(mkv_root_folder, structure_file_name);
+
+        uint64_t lowTime = cm.GetHighestTimestamp();
+
+
+        //CameraManager cm(images_root_folder, structure_file_name);
+        //CameraManager cm(mkv_root_folder, structure_file_name);
+        //CameraManager cm(images_root_folder, structure_file_name);
+
+        
+        //vgd.voxel_size = 9.f / 512.f;
+
+        //uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        
+
+        AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
+        VoxelGridData vgd; //Edit values to toy with voxel grid settings
+        vgd.voxel_size = 9.0f / 512.0f;
+        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        int i = 0;
+        while (cm.CycleAllCamerasForward()) {
+
+
+            auto alembicMesh = cm.GetMesh(&vgd);
+
+            auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
+            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
+
+            //open3d::io::WriteImageToPNG("outputData/texture" + std::to_string(i) +".png", *stitchedImage);
+            if (&alembicMesh != nullptr) {
+                saveMesh(legacyMesh, alembicWriter);
+            }
+            i++;
+        }
+        uint64_t highTime = cm.GetHighestTimestamp();
+
+        alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime) / ((float)i * 1000000.0f));
+    }
     void refactored_code_test()
     {
         std::string mkv_root_folder = "Kinect Test 1";
@@ -307,7 +354,7 @@ namespace MKV_Rendering {
         
         CameraManager cm(mkv_root_folder, structure_file_name);
 
-        uint64_t lowTime = cm.GetHighestTimestamp();
+        
 
         
         //CameraManager cm(images_root_folder, structure_file_name);
@@ -319,29 +366,6 @@ namespace MKV_Rendering {
 
         //uint64_t timestamp = 10900000; //Approximately 11 seconds in
         uint64_t timestamp = 7900000; //Approximately 8 seconds in
-
-        AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
-        VoxelGridData vgd; //Edit values to toy with voxel grid settings
-        vgd.voxel_size = 9.0f/512.0f;
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
-        int i = 0;
-        while (cm.CycleAllCamerasForward()) {
-           
-            
-            auto alembicMesh = cm.GetMesh(&vgd);
-            
-            auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
-            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
-            
-            //open3d::io::WriteImageToPNG("outputData/texture" + std::to_string(i) +".png", *stitchedImage);
-            if (&alembicMesh != nullptr) {
-                saveMesh(legacyMesh, alembicWriter);
-            }
-            i++;
-        }
-        uint64_t highTime = cm.GetHighestTimestamp();
-
-        alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime)  / ((float)i * 1000000.0f));
         //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
         //
         //std::cout << old_grid.HasVoxels() << std::endl;
