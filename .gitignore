@@ -7,3 +7,4 @@ x64/
 TestOpen3D/Kinect Test 2/
 TestOpen3D/NonRigidDebug/
 TestOpen3D/syncnew_3/
+*.abc

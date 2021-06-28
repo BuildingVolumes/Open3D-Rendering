@@ -319,11 +319,8 @@ namespace MKV_Rendering {
         std::string structure_file_name = ".structure";
         std::string livescan_root_folder = "syncnew_3";
 
-
-        double FPS = 0;// 30;
-
-
-        CameraManager cm(mkv_root_folder, structure_file_name);
+        CameraManager cm;
+        cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
 
         uint64_t lowTime = cm.GetHighestTimestamp();
 
@@ -344,7 +341,7 @@ namespace MKV_Rendering {
         //The one for images currently has an incorrect FPS value due to the CreateImageArrayFromMKV function above
         //Also the extrinsics are broken in it
 
-        CameraManager cm;
+        
         //ErrorLogger::EXECUTE("Load MKV Files", &cm, &CameraManager::LoadTypeStructure, mkv_root_folder, structure_file_name);
         //ErrorLogger::EXECUTE("Load Image Files", &cm, &CameraManager::LoadTypeStructure, images_root_folder, structure_file_name);
         ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
@@ -363,7 +360,8 @@ namespace MKV_Rendering {
         AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
         vgd.voxel_size = 9.0f / 512.0f;
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+
+        //uint64_t timestamp = 10900000; //Approximately 11 seconds in
         int i = 0;
         while (cm.CycleAllCamerasForward()) {
 
@@ -403,7 +401,8 @@ namespace MKV_Rendering {
 
         
         
-        CameraManager cm(mkv_root_folder, structure_file_name);
+        CameraManager cm;
+        cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
 
         
 

@@ -34,6 +34,8 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AlembicWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="TextureUnpacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -67,6 +69,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AlembicWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="TextureUnpacker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
