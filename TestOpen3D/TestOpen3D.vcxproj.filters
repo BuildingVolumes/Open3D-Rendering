@@ -12,15 +12,66 @@
     <ClCompile Include="TextureUnpacker.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Abstract_Data.h" />
-    <ClInclude Include="AdditionalUtilities.h" />
-    <ClInclude Include="AlembicWriter.h" />
-    <ClInclude Include="CameraManager.h" />
-    <ClInclude Include="ColorMapOptimizer.h" />
-    <ClInclude Include="ErrorLogger.h" />
-    <ClInclude Include="Image_Data.h" />
-    <ClInclude Include="MKV_Data.h" />
-    <ClInclude Include="TextureUnpacker.h" />
-    <ClInclude Include="VoxelGridData.h" />
+    <ClCompile Include="KinectRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MKV_Data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ErrorLogger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Image_Data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Abstract_Data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AlembicWriter.cpp">
+    <ClCompile Include="TextureUnpacker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Livescan_Data.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MKV_Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorLogger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VoxelGridData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AdditionalUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Image_Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Abstract_Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ColorMapOptimizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AlembicWriter.h">
+    <ClInclude Include="TextureUnpacker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Livescan_Data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

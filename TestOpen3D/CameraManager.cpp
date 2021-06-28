@@ -4,6 +4,7 @@
 
 #include "MKV_Data.h"
 #include "Image_Data.h"
+#include "Livescan_Data.h"
 
 #include <fstream>
 
@@ -52,16 +53,23 @@ void MKV_Rendering::CameraManager::LoadStructure(std::string structure_path, std
 	structure_file.close();
 }
 
-CameraManager::CameraManager(std::string root_folder, std::string structure_file_name)
+CameraManager::CameraManager()
 {
+	
+}
+
+bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, std::string structure_file_name)
+{
+	if (loaded)
+	{
+		ErrorLogger::LOG_ERROR("Manager already loaded!");
+		return false;
+	}
+
 	std::vector<std::string> all_folders = GetDirectories(root_folder);
 	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
 
-	std::fstream structure_file;
-	std::vector<std::string> lines;
-
 	std::map<std::string, std::string> camera_structure;
-	std::string parser;
 
 	for (auto _folder : all_folders)
 	{
@@ -72,7 +80,7 @@ CameraManager::CameraManager(std::string root_folder, std::string structure_file
 		std::cout << "Camera specifics at " << _folder << ": " << std::endl;
 		for (auto _pair : camera_structure)
 		{
-			std::cout << "\t" << _pair.first << ": '" << _pair.second <<  "'" << std::endl;
+			std::cout << "\t" << _pair.first << ": '" << _pair.second << "'" << std::endl;
 		}
 
 		std::string c_type = camera_structure["Type"];
@@ -80,17 +88,17 @@ CameraManager::CameraManager(std::string root_folder, std::string structure_file
 		if (c_type == "mkv")
 		{
 			camera_data.push_back(new MKV_Data(
-				_folder, 
-				camera_structure["MKV_File"], 
+				_folder,
+				camera_structure["MKV_File"],
 				camera_structure["Calibration_File"]
 			));
 		}
 		else if (c_type == "image")
 		{
 			camera_data.push_back(new Image_Data(
-				_folder, 
-				camera_structure["Color"], 
-				camera_structure["Depth"], 
+				_folder,
+				camera_structure["Color"],
+				camera_structure["Depth"],
 				camera_structure["Intrinsics_Json"],
 				camera_structure["Calibration_File"],
 				camera_structure["FPS"]
@@ -109,13 +117,121 @@ CameraManager::CameraManager(std::string root_folder, std::string structure_file
 	if (camera_data.size() == 0)
 	{
 		ErrorLogger::LOG_ERROR(
-			"No data files present!", true
+			"No data files present!"
 		);
+
+		return false;
 	}
+
+	loaded = true;
+
+	return true;
+}
+
+bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, float FPS)
+{
+	if (loaded)
+	{
+		ErrorLogger::LOG_ERROR("Manager already loaded!");
+		return false;
+	}
+
+	std::vector<std::string> extrinsic_file_candidates;
+	std::string extrinsic_file = "";
+
+	open3d::utility::filesystem::ListFilesInDirectory(root_folder, extrinsic_file_candidates);
+
+	for (int i = 0; i < extrinsic_file_candidates.size(); ++i)
+	{
+		std::vector<std::string> file_name_and_ext;
+
+		SplitString(extrinsic_file_candidates[i], file_name_and_ext, '.');
+
+		if (file_name_and_ext.back() == "log")
+		{
+			extrinsic_file = extrinsic_file_candidates[i];
+			break;
+		}
+	}
+
+	if (extrinsic_file == "")
+	{
+		ErrorLogger::LOG_ERROR("No extrinsics file detected!");
+		
+		return false;
+	}
+
+	std::vector<std::string> all_folders = GetDirectories(root_folder);
+	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
+
+	std::fstream extrinsics_filestream;
+	extrinsics_filestream.open(extrinsic_file);
+	std::vector<std::string> lines;
+
+	std::map<std::string, std::string> camera_structure;
+
+	for (int i = 0; i < all_folders.size(); ++i)
+	{
+		std::string parser = "";
+
+		auto _folder = all_folders[i];
+
+		std::cout << _folder << std::endl;
+
+		std::vector<std::string> extrinsics_string;
+
+		if (!std::getline(extrinsics_filestream, parser))
+		{
+			break;
+		}
+		else if (parser == "")
+		{
+			break;
+		}
+
+		for (int i = 0; i < 4; ++i)
+		{
+			std::getline(extrinsics_filestream, parser);
+			extrinsics_string.push_back(parser);
+		}
+
+		camera_data.push_back(new Livescan_Data(
+			_folder,
+			extrinsics_string,
+			FPS
+		));
+	}
+
+	if (camera_data.size() == 0)
+	{
+		ErrorLogger::LOG_ERROR(
+			"No data files present!"
+		);
+
+		return false;
+	}
+
+	loaded = true;
+
+	return true;
 }
 
 CameraManager::~CameraManager()
 {
+	if (loaded)
+	{
+		Unload();
+	}
+}
+
+bool MKV_Rendering::CameraManager::Unload()
+{
+	if (!loaded)
+	{
+		ErrorLogger::LOG_ERROR("Attempting to unload manager that has not been loaded!");
+		return false;
+	}
+
 	while (!camera_data.empty())
 	{
 		if (camera_data.back() != nullptr)
@@ -125,6 +241,10 @@ CameraManager::~CameraManager()
 
 		camera_data.pop_back();
 	}
+
+	loaded = false;
+
+	return true;
 }
 
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGridData* data)

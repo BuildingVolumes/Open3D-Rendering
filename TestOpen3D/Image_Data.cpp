@@ -64,7 +64,6 @@ void MKV_Rendering::Image_Data::LoadImages()
 
 void MKV_Rendering::Image_Data::GetIntrinsicTensor()
 {
-
     std::ifstream intrinsic_file = std::ifstream(intrinsics_file);
     std::string file_contents;
 

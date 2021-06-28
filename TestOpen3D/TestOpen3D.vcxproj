@@ -179,6 +179,7 @@
     <ClCompile Include="ErrorLogger.cpp" />
     <ClCompile Include="Image_Data.cpp" />
     <ClCompile Include="KinectRenderer.cpp" />
+    <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MKV_Data.cpp" />
     <ClCompile Include="TextureUnpacker.cpp" />
@@ -191,6 +192,7 @@
     <ClInclude Include="ColorMapOptimizer.h" />
     <ClInclude Include="ErrorLogger.h" />
     <ClInclude Include="Image_Data.h" />
+    <ClInclude Include="Livescan_Data.h" />
     <ClInclude Include="MKV_Data.h" />
     <ClInclude Include="TextureUnpacker.h" />
     <ClInclude Include="VoxelGridData.h" />
