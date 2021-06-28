@@ -10,6 +10,7 @@
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MKV_Data.cpp" />
     <ClCompile Include="TextureUnpacker.cpp" />
+    <ClCompile Include="Livescan_Data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="KinectRenderer.cpp">
@@ -39,43 +40,18 @@
     <ClCompile Include="TextureUnpacker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Livescan_Data.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MKV_Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ErrorLogger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="VoxelGridData.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CameraManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AdditionalUtilities.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Image_Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Abstract_Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ColorMapOptimizer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AlembicWriter.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureUnpacker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Livescan_Data.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
+    <ClInclude Include="Abstract_Data.h" />
+    <ClInclude Include="AdditionalUtilities.h" />
+    <ClInclude Include="AlembicWriter.h" />
+    <ClInclude Include="CameraManager.h" />
+    <ClInclude Include="ColorMapOptimizer.h" />
+    <ClInclude Include="ErrorLogger.h" />
+    <ClInclude Include="Image_Data.h" />
+    <ClInclude Include="Livescan_Data.h" />
+    <ClInclude Include="MKV_Data.h" />
+    <ClInclude Include="TextureUnpacker.h" />
+    <ClInclude Include="VoxelGridData.h" />
   </ItemGroup>
 </Project>

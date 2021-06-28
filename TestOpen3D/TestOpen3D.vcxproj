@@ -156,7 +156,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;NDEBUG;BUILD_GUI;_GLIBCXX_USE_CXX11_ABI=0;WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_USE_MATH_DEFINES;_ENABLE_EXTENDED_ALIGNED_STORAGE;__TBB_LIB_NAME=tbb_static;OPEN3D_STATIC;GLEW_STATIC;FMT_HEADER_ONLY=1;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(OPEN_3D_DIR)\3rdparty\cpp;$(OPEN_3D_DIR)\3rdparty\fmt\include;$(OPEN_3D_DIR)\3rdparty\Eigen;$(OPEN_3D_DIR)\3rdparty\GLFW\include;$(OPEN_3D_DIR)\3rdparty\glew\include;$(OPEN_3D_DIR)\k4a\src\ext_k4a\build\native\include;$(OPEN_3D_DIR)\libjpeg-turbo-install\include;$(OPEN_3D_DIR)\jsoncpp\include;$(ALEMBIC_DIR)\lib;$(IMATH_DIR)\include;$(IMATH_DIR)\include\Imath;$(PACKMASTER_DIR)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OPEN_3D_DIR)\cpp;$(OPEN_3D_DIR)\3rdparty\fmt\include;$(OPEN_3D_DIR)\3rdparty\Eigen;$(OPEN_3D_DIR)\3rdparty\GLFW\include;$(OPEN_3D_DIR)\3rdparty\glew\include;$(OPEN_3D_BUILD_DIR)\k4a\src\ext_k4a\build\native\include;$(OPEN_3D_BUILD_DIR)\libjpeg-turbo-install\include;$(OPEN_3D_BUILD_DIR)\jsoncpp\include;$(ALEMBIC_DIR)\lib;$(IMATH_DIR)\include;$(IMATH_DIR)\include\Imath;$(PACKMASTER_DIR)\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
