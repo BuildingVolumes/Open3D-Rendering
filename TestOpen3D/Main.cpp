@@ -463,6 +463,17 @@ namespace MKV_Rendering {
 }
 
 
+void CodeC()
+{
+    ErrorLogger::EXECUTE("Alembic Processing", &MKV_Rendering::alembicCode);
+}
+
+void CodeJ()
+{
+    ErrorLogger::EXECUTE("Refactored Code Test", &MKV_Rendering::refactored_code_test);
+}
+
+
 //Not used currently
 void PrintHelp() {
     using namespace open3d;
@@ -496,8 +507,35 @@ int render_kinect(int argc, char** argv)
 }
 
 int main() {
-    ErrorLogger::EXECUTE("Refactored Code Test", &MKV_Rendering::refactored_code_test);
 
-    
+    char char_value = '\0';
+
+    void (*function_to_run)();
+    function_to_run = PrintHelp;
+
+    while (char_value == '\0')
+    {
+        std::cout << "Run c or j?" << std::endl;
+        std::cin >> char_value;
+
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+        switch (char_value)
+        {
+        case 'c':
+            function_to_run = CodeC;
+            break;
+        case 'j':
+            function_to_run = CodeJ;
+            break;
+        default:
+            char_value = '\0';
+            std::cout << "Please enter c or j" << std::endl;
+            break;
+        }
+    }
+
+    function_to_run();
+
     return 0;
 }
