@@ -1,0 +1,1 @@
+python3 runOpen3d.py 1 2 3 4 5 "..\x64\Release"
