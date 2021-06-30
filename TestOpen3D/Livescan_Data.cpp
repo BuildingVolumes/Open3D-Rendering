@@ -22,11 +22,17 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 
 		if (split_extension.back() == "jpg")
 		{
-			color_files.push_back(s);
+			std::vector<std::string> split_num;
+			SplitString(split_extension.front(), split_num, '_');
+			int loc = std::stoi(split_num.back());
+			color_files[loc] = s;
 		}
 		else if (split_extension.back() == "png")
 		{
-			depth_files.push_back(s);
+			std::vector<std::string> split_num;
+			SplitString(split_extension.front(), split_num, '_');
+			int loc = std::stoi(split_num.back());
+			depth_files[loc] = s;
 		}
 		else if (split_extension.back() == "json")
 		{
@@ -34,15 +40,6 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 			intrinsics_file = s;
 		}
 	}
-
-	std::sort(color_files.begin(), color_files.end());
-	std::sort(depth_files.begin(), depth_files.end());
-
-	int color_greater = (color_files.size() > depth_files.size());
-	int max_files = color_greater * color_files.size() + (1 - color_greater) * depth_files.size();
-
-	color_files.resize(max_files);
-	depth_files.resize(max_files);
 }
 
 void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
@@ -73,6 +70,10 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 	calibration.color_camera_calibration.intrinsics.parameters.param.fy *= ratio;
 	calibration.color_camera_calibration.intrinsics.parameters.param.cx *= ratio;
 	calibration.color_camera_calibration.intrinsics.parameters.param.cy *= ratio;
+
+	std::cout << calibration.color_camera_calibration.resolution_width << ", " << calibration.color_camera_calibration.resolution_height << std::endl;
+
+	std::cout << calibration.depth_camera_calibration.resolution_width << ", " << calibration.depth_camera_calibration.resolution_height << std::endl;
 
 	auto params = calibration.color_camera_calibration.intrinsics.parameters;
 
@@ -223,19 +224,13 @@ bool MKV_Rendering::Livescan_Data::SeekToTime(uint64_t time)
 
 	std::cout << "seeking to " << current_frame << std::endl;
 
-	if (current_frame >= color_files.size())
+	auto upper = color_files.upper_bound(current_frame);
+
+	if (upper == color_files.end())
 	{
-		current_frame = color_files.size() - 1;
+		current_frame = color_files.rbegin()->first;
 		UpdateTimestamp();
 		ErrorLogger::LOG_ERROR("Reached end of image folder!");
-		return false;
-	}
-
-	if (current_frame < 0)
-	{
-		current_frame = 0;
-		UpdateTimestamp();
-		ErrorLogger::LOG_ERROR("Reached beginning of image folder!");
 		return false;
 	}
 
@@ -247,13 +242,15 @@ bool MKV_Rendering::Livescan_Data::SeekToTime(uint64_t time)
 
 std::shared_ptr<open3d::geometry::RGBDImage> MKV_Rendering::Livescan_Data::GetFrameRGBD()
 {
-	auto col = (*open3d::t::io::CreateImageFromFile(color_files[current_frame])).ToLegacyImage();
-	auto dep = (*open3d::t::io::CreateImageFromFile(depth_files[current_frame])).ToLegacyImage();
+	auto col = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second)).ToLegacyImage();
+	auto dep = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
+
+	auto new_dep = ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &dep, &col);
 
 	std::cout << color_files[current_frame] << std::endl;
 
 	return std::make_shared<open3d::geometry::RGBDImage>(
-		col, dep
+		col, new_dep
 		);
 }
 
@@ -277,8 +274,10 @@ open3d::camera::PinholeCameraParameters MKV_Rendering::Livescan_Data::GetParamet
 
 void MKV_Rendering::Livescan_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
 {
-	auto color = (*open3d::t::io::CreateImageFromFile(color_files[current_frame]));
-	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files[current_frame])).ToLegacyImage();
+	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second));
+	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
+
+	std::cout << "current frame: " << current_frame << "," << color_files[current_frame] << std::endl;
 
 	auto new_depth = open3d::t::geometry::Image::FromLegacyImage(
 		ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &depth, &color.ToLegacyImage())

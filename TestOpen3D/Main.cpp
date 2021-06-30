@@ -386,6 +386,7 @@ namespace MKV_Rendering {
         std::string mkv_root_folder = "Kinect Test 1";
         std::string images_root_folder = "Kinect Test 2";
         std::string structure_file_name = ".structure";
+        std::string livescan_root_folder = "syncnew_3";
 
         double FPS = 0;// 30;
 
@@ -402,9 +403,9 @@ namespace MKV_Rendering {
         
         
         CameraManager cm;
-        cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
+        //cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
 
-        
+        cm.LoadTypeLivescan(livescan_root_folder, 5);
 
         
         //CameraManager cm(images_root_folder, structure_file_name);
@@ -425,9 +426,9 @@ namespace MKV_Rendering {
         //
         //return;
 
-        auto vg = ErrorLogger::EXECUTE(
-            "Generate Voxel Grid", &cm, &CameraManager::GetVoxelGridAtTimestamp, &vgd, timestamp
-        );
+        //auto vg = ErrorLogger::EXECUTE(
+        //    "Generate Voxel Grid", &cm, &CameraManager::GetVoxelGridAtTimestamp, &vgd, timestamp
+        //);
 
         //RaycastVoxelGrid(vg, cm, vgd);
         //

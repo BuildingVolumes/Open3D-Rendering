@@ -12,9 +12,9 @@
 
 namespace MKV_Rendering {
 	class Livescan_Data : public Abstract_Data
-	{
-		std::vector<std::string> color_files;
-		std::vector<std::string> depth_files;
+	{		
+		std::map<int, std::string> color_files;
+		std::map<int, std::string> depth_files;
 
 		std::vector<std::string> extrinsic_individual;
 
