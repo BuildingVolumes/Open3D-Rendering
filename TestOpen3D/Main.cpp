@@ -25,6 +25,8 @@
 #include <chrono>
 #include <uvpCore.hpp>
 
+#define PIPELINE_MODE 0
+
 using namespace open3d;
 using namespace open3d::core;
 using namespace open3d::io;
@@ -313,15 +315,15 @@ namespace MKV_Rendering {
     }
 
 
-    void alembicCode() {
-        std::string mkv_root_folder = "Kinect Test 1";
-        std::string images_root_folder = "Kinect Test 2";
-        std::string structure_file_name = ".structure";
-        std::string livescan_root_folder = "syncnew_3";
+    
+
+    void alembicCode(std::string mkv_root_folder, std::string images_root_folder, std::string structure_file_name, 
+                     std::string livescan_root_folder, std::string output_folder, VoxelGridData vgd) {
 
         CameraManager cm;
+        std::cout << mkv_root_folder << std::endl;
         cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
-
+        
         uint64_t lowTime = cm.GetHighestTimestamp();
 
 
@@ -344,7 +346,7 @@ namespace MKV_Rendering {
         
         //ErrorLogger::EXECUTE("Load MKV Files", &cm, &CameraManager::LoadTypeStructure, mkv_root_folder, structure_file_name);
         //ErrorLogger::EXECUTE("Load Image Files", &cm, &CameraManager::LoadTypeStructure, images_root_folder, structure_file_name);
-        ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
+        //ErrorLogger::EXECUTE("Load Livescan Files", &cm, &CameraManager::LoadTypeLivescan, livescan_root_folder, (float)FPS);
 
 
         
@@ -357,8 +359,13 @@ namespace MKV_Rendering {
         //uint64_t timestamp = 7900000; //Approximately 8 seconds in
         uint64_t timestamp = 1999999; //Approximately 2 seconds in
 
-        AlembicWriter alembicWriter("outputData/timeSample2ElectricBoogalo.abc", "Hogue", 1.0f, (1.0f / 30.0f));
-        VoxelGridData vgd; //Edit values to toy with voxel grid settings
+        std::string fileName = "bashTest.abc";
+        std::string outputFile = output_folder;
+
+        std::cout << outputFile << std::endl;
+        AlembicWriter alembicWriter(outputFile, "Hogue", 1.0f, (1.0f / 30.0f));
+        std::cout << "test" << std::endl;
+        
         vgd.voxel_size = 9.0f / 512.0f;
 
         //uint64_t timestamp = 10900000; //Approximately 11 seconds in
@@ -380,6 +387,16 @@ namespace MKV_Rendering {
         uint64_t highTime = cm.GetHighestTimestamp();
 
         alembicWriter.setTimeSampling((float)lowTime / 1000000.0f, (float)(highTime - lowTime) / ((float)i * 1000000.0f));
+    }
+
+    void defaultAlembic() {
+        std::string mkv_root_folder = "Kinect Test 1";
+        std::string images_root_folder = "Kinect Test 2";
+        std::string structure_file_name = ".structure";
+        std::string livescan_root_folder = "syncnew_3";
+        std::string output_folder = "outputData";
+        MKV_Rendering::VoxelGridData vkd;
+        alembicCode(mkv_root_folder, images_root_folder, structure_file_name, livescan_root_folder, output_folder, vkd);
     }
     void refactored_code_test()
     {
@@ -468,7 +485,7 @@ namespace MKV_Rendering {
 
 void CodeC()
 {
-    ErrorLogger::EXECUTE("Alembic Processing", &MKV_Rendering::alembicCode);
+    ErrorLogger::EXECUTE("Alembic Processing", &MKV_Rendering::defaultAlembic);
 }
 
 void CodeJ()
@@ -496,19 +513,63 @@ void PrintHelp() {
     utility::LogInfo("");
 }
 
-int render_kinect(int argc, char** argv)
+#if PIPELINE_MODE == 1
+int main(int argc, char** argv)
 {
+    
+    const int POSITIONAL_ARGS = 6;
     if (argc == 1 || utility::ProgramOptionExists(argc, argv, "--help") ||
-        argc < 4) {
+        argc < POSITIONAL_ARGS) {
         PrintHelp();
         return 1;
     }
 
-    using MaskCode = t::geometry::TSDFVoxelGrid::SurfaceMaskCode;
+    std::string mkv_folder = argv[1];
+    std::string img_folder = argv[2];
+    std::string strct_file_name = argv[3];
+    std::string liveScan = argv[4];
+    std::string output_folder = argv[5];
+    
+    MKV_Rendering::VoxelGridData vkd;
+    
+    if (argc > POSITIONAL_ARGS) {
+        for (int i = POSITIONAL_ARGS; i < argc - 1; i += 2) {
+            
+            std::string arg = argv[i];
+            std::string val = argv[i + 1];
+            std::cout << arg << " " << val << std::endl;
+            if ("-vgBlock" == arg) {
+                vkd.blocks = stoi(val);
+            }
+            else if ("-vgSize" == arg) {
+                vkd.depth_max = stof(val);
+            }
+            else if ("-vgScale" == arg) {
+                vkd.depth_scale = stof(val);
+            }
+            else if ("-vgMax" == arg) {
+                vkd.depth_max = stof(val);
+            }
+            else if ("-vgTrunc" == arg) {
+                vkd.signed_distance_field_truncation = stof(val);
+            }
+            else if ("-vgDVCode" == arg) {
+                vkd.device_code = val;
+            }
+            else {
+                std::cout << "Error: " << arg << " isn't a valid parameter" << std::endl;
+                return(-1);
+            }
+        }
+    }
+    
+
+    
+    MKV_Rendering::alembicCode(mkv_folder, img_folder, strct_file_name, liveScan, output_folder, vkd);
 
     return 0;
 }
-
+#else
 int main() {
 
     char char_value = '\0';
@@ -542,3 +603,4 @@ int main() {
 
     return 0;
 }
+#endif
