@@ -68,7 +68,7 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 
 	std::vector<std::string> all_folders = GetDirectories(root_folder);
 	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
-
+	
 	std::map<std::string, std::string> camera_structure;
 
 	for (auto _folder : all_folders)

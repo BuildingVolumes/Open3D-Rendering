@@ -28,6 +28,7 @@ AlembicWriter::AlembicWriter(std::string fileName, std::string topName, float st
 	this->topName = topName;
 
 	archive = Alembic::Abc::OArchive(Alembic::AbcCoreOgawa::WriteArchive(), this->fileName);
+	std::cout << archive.getName() << std::endl;
 	top = archive.getTop();
 	//Alembic::AbcGeom::v12::OXform xform(top, this->topName, g_ts);
 
