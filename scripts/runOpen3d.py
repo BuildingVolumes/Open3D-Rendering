@@ -1,18 +1,5 @@
 import sys, os
 import argparse
-from dataclasses import dataclass
-
-
-@dataclass
-class VoxelGridData:
-    blocks : int
-    voxel_size : float
-    depth_scale : float
-    depth_max : float
-    signed_distance_field_trucation : float
-
-    device_code : str
-    
 
 
 def createAlembic(inputDir, imageDir, structFileName,liveScanFolder, outputDir, binDir, vgData):
