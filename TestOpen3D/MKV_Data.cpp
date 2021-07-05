@@ -151,6 +151,14 @@ void MKV_Data::GetIntrinsicTensor()
         {0, params.fy, params.cy},
         {0, 0, 1}
         });
+
+    std::cout << intrinsic_t.ToString() << std::endl;
+
+    std::cout <<
+        calibration.depth_camera_calibration.intrinsics.parameters.param.fx << ", " <<
+        calibration.depth_camera_calibration.intrinsics.parameters.param.fy << ", " <<
+        calibration.depth_camera_calibration.intrinsics.parameters.param.cx << ", " <<
+        calibration.depth_camera_calibration.intrinsics.parameters.param.cy << std::endl;
 }
 
 void MKV_Data::GetExtrinsicTensor()
@@ -297,6 +305,7 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
             width * sizeof(uint16_t), rgbd_buffer->depth_.data_.data(),
             width * height * sizeof(uint16_t), NULL, NULL,
             &k4a_transformed_depth);
+
         if (K4A_RESULT_SUCCEEDED !=
             k4a_transformation_depth_image_to_color_camera(
                 transform, k4a_depth, k4a_transformed_depth)) {
@@ -313,6 +322,8 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
             k4a_image_get_buffer(k4a_depth),
             k4a_image_get_size(k4a_depth));
     }
+
+    DrawObject(rgbd_buffer->depth_);
 
     /* process depth */
     k4a_image_release(k4a_color);

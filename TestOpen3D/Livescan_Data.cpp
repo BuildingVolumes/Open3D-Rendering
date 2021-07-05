@@ -39,13 +39,37 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 			std::cout << s << std::endl;
 			intrinsics_file = s;
 		}
+
+		//if (split_extension.back() == "png")
+		//{
+		//	std::vector<std::string> split_num;
+		//	SplitString(split_extension.front(), split_num, '_');
+		//	int loc = std::stoi(split_num.back());
+		//
+		//	
+		//	if (split_num.front().compare(split_num.front().size() - 5, 5, "color") == 0)
+		//	{
+		//		std::cout << split_num.front() << ", " << s << " added to color" << std::endl;
+		//
+		//		color_files[loc] = s;
+		//	}
+		//	else
+		//	{
+		//		std::cout << split_num.front() << ", " << s << " added to depth" << std::endl;
+		//
+		//		depth_files[loc] = s;
+		//	}
+		//}
+		//else if (split_extension.back() == "json")
+		//{
+		//	std::cout << s << std::endl;
+		//	intrinsics_file = s;
+		//}
 	}
 }
 
 void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 {
-	double ratio = 720.0 / 1080.0;
-
 	std::ifstream intrinsic_file = std::ifstream(intrinsics_file);
 	std::string file_contents;
 
@@ -64,20 +88,7 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 		std::cout << "ERROR: FAILED TO READ INTRINSICS JSON!" << std::endl;
 	}
 
-	calibration.color_camera_calibration.resolution_width *= ratio;
-	calibration.color_camera_calibration.resolution_height *= ratio;
-	calibration.color_camera_calibration.intrinsics.parameters.param.fx *= ratio;
-	calibration.color_camera_calibration.intrinsics.parameters.param.fy *= ratio;
-	calibration.color_camera_calibration.intrinsics.parameters.param.cx *= ratio;
-	calibration.color_camera_calibration.intrinsics.parameters.param.cy *= ratio;
-
-	std::cout << calibration.color_camera_calibration.resolution_width << ", " << calibration.color_camera_calibration.resolution_height << std::endl;
-
-	std::cout << calibration.depth_camera_calibration.resolution_width << ", " << calibration.depth_camera_calibration.resolution_height << std::endl;
-
 	auto params = calibration.color_camera_calibration.intrinsics.parameters;
-
-	calibration.color_resolution = K4A_COLOR_RESOLUTION_720P;
 
 	intrinsic_mat = Eigen::Matrix3d::Identity();
 	intrinsic_mat(0, 0) = params.param.fx;
@@ -90,6 +101,8 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 			{0, params.param.fy, params.param.cy},
 			{0, 0, 1}
 		});
+
+	std::cout << intrinsic_t.ToString() << std::endl;
 }
 
 void MKV_Rendering::Livescan_Data::GetExtrinsicTensor()
@@ -117,6 +130,12 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 	new_depth.bytes_per_channel_ = old_depth->bytes_per_channel_;
 	new_depth.num_of_channels_ = old_depth->num_of_channels_;
 	new_depth.data_.resize(height * width * new_depth.bytes_per_channel_);
+
+	std::cout <<
+		new_depth.height_ << ", " <<
+		new_depth.width_ << ", " <<
+		new_depth.bytes_per_channel_ << ", " <<
+		new_depth.num_of_channels_ << std::endl;
 
 	k4a_image_t k4a_transformed_depth = nullptr;
 	k4a_image_t k4a_depth = nullptr;
@@ -277,11 +296,16 @@ void MKV_Rendering::Livescan_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVo
 	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second));
 	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
 
-	std::cout << "current frame: " << current_frame << "," << color_files[current_frame] << std::endl;
+	std::cout << "current frame: " << current_frame << "," << color_files.lower_bound(current_frame)->second << ", " << depth_files.lower_bound(current_frame)->second << std::endl;
+
+	auto transformed_depth = ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &depth, &color.ToLegacyImage());
 
 	auto new_depth = open3d::t::geometry::Image::FromLegacyImage(
-		ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &depth, &color.ToLegacyImage())
+		transformed_depth
 	);
+
+	DrawObject(depth);
+	DrawObject(transformed_depth);
 
 	color.To(grid->GetDevice());
 	new_depth.To(grid->GetDevice());

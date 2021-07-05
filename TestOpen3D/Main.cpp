@@ -387,6 +387,7 @@ namespace MKV_Rendering {
         std::string images_root_folder = "Kinect Test 2";
         std::string structure_file_name = ".structure";
         std::string livescan_root_folder = "syncnew_3";
+        std::string livescan_single_image_test = "SingleImageTest";
 
         double FPS = 0;// 30;
 
@@ -405,7 +406,8 @@ namespace MKV_Rendering {
         CameraManager cm;
         //cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
 
-        cm.LoadTypeLivescan(livescan_root_folder, 5);
+        //cm.LoadTypeLivescan(livescan_root_folder, 5);
+        cm.LoadTypeLivescan(livescan_single_image_test, 5);
 
         
         //CameraManager cm(images_root_folder, structure_file_name);

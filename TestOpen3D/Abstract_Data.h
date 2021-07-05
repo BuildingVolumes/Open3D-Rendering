@@ -53,5 +53,18 @@ namespace MKV_Rendering {
 		int GetImageHeight() { return imageHeight; }
 
 		int GetImageWidth() { return imageWidth; }
+
+		template<class T>
+		void DrawObject(T& object_to_draw)
+		{
+			std::vector<std::shared_ptr<const open3d::geometry::Geometry>> to_draw;
+
+			auto object_ptr = std::make_shared<T>(
+				object_to_draw);
+
+			to_draw.push_back(object_ptr);
+
+			open3d::visualization::DrawGeometries(to_draw);
+		}
 	};
 }
