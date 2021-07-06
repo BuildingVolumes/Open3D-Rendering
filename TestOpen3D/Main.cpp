@@ -424,7 +424,8 @@ namespace MKV_Rendering {
         //cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
 
         //cm.LoadTypeLivescan(livescan_root_folder, 5);
-        cm.LoadTypeLivescan(livescan_single_image_test, 5);
+        //cm.LoadTypeLivescan(livescan_single_image_test, 5);
+        cm.LoadTypeLivescan("convertedImages", 5);
 
         
         //CameraManager cm(images_root_folder, structure_file_name);

@@ -82,7 +82,7 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 
 	intrinsic_file.close();
 
-	k4a_result_t res = k4a_calibration_get_from_raw(&file_contents[0], file_contents.size() + 1, k4a_depth_mode_t::K4A_DEPTH_MODE_NFOV_UNBINNED, k4a_color_resolution_t::K4A_COLOR_RESOLUTION_1080P, &calibration);
+	k4a_result_t res = k4a_calibration_get_from_raw(&file_contents[0], file_contents.size() + 1, k4a_depth_mode_t::K4A_DEPTH_MODE_NFOV_UNBINNED, k4a_color_resolution_t::K4A_COLOR_RESOLUTION_720P, &calibration);
 	if (res == k4a_result_t::K4A_RESULT_FAILED)
 	{
 		std::cout << "ERROR: FAILED TO READ INTRINSICS JSON!" << std::endl;
@@ -107,13 +107,15 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 
 void MKV_Rendering::Livescan_Data::GetExtrinsicTensor()
 {
-	for (int i = 0; i < extrinsic_individual.size(); ++i)
+	for (int i = 0; i < 16; ++i)
 	{
 		extrinsic_mat.block<1, 1>(i / 4, i % 4)[0] = std::stof(extrinsic_individual[i]);
 	}
 
-	extrinsic_mat = extrinsic_mat.inverse();
+	std::cout << extrinsic_mat << std::endl;
 
+	extrinsic_mat = extrinsic_mat.inverse();
+	
 	extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
 }
 
@@ -303,9 +305,6 @@ void MKV_Rendering::Livescan_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVo
 	auto new_depth = open3d::t::geometry::Image::FromLegacyImage(
 		transformed_depth
 	);
-
-	DrawObject(depth);
-	DrawObject(transformed_depth);
 
 	color.To(grid->GetDevice());
 	new_depth.To(grid->GetDevice());
