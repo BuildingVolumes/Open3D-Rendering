@@ -148,8 +148,8 @@ class TextureUnpacker
         mat.block<1, 1>(0, 3)[0] += islandSolution.m_Pivot[0];
         mat.block<1, 1>(1, 3)[0] += islandSolution.m_Pivot[1];
 
-        auto ca = cos(islandSolution.m_Angle);
-        auto sa = sin(islandSolution.m_Angle);
+        auto ca = cos(islandSolution.m_Angle * M_PI / 180.0);
+        auto sa = sin(islandSolution.m_Angle * M_PI / 180.0);
 
         rotZmat.block<1, 1>(0, 0)[0] *= ca;
         rotZmat.block<1, 1>(1, 1)[0] *= ca;

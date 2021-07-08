@@ -140,10 +140,19 @@ bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::Triang
         }
     }
 
+    uvpInput.m_UvData.m_FaceCount = m_FaceArray.size();
+    uvpInput.m_UvData.m_pFaceArray = m_FaceArray.data();
+
+    uvpInput.m_UvData.m_VertCount = m_VertArray.size();
+    uvpInput.m_UvData.m_pVertArray = m_VertArray.data();
+
     std::cout << "Unpacking..." << std::endl;
 
-    if (opExecutor.execute(uvpInput) != UVP_ERRORCODE::SUCCESS)
+    auto return_val = opExecutor.execute(uvpInput);
+
+    if (return_val != UVP_ERRORCODE::SUCCESS)
     {
+        std::cout << "Error type: " << (int)return_val << std::endl;
         E_LOG("Packing operation failed", true);
     }
 

@@ -470,7 +470,7 @@ namespace MKV_Rendering {
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
         );
 
-        ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);
+        //ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);
 
         DrawObject(*mesh_legacy);
 
