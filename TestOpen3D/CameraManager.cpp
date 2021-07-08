@@ -141,11 +141,15 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, flo
 
 	open3d::utility::filesystem::ListFilesInDirectory(root_folder, extrinsic_file_candidates);
 
+	std::cout << root_folder << std::endl;
+
 	for (int i = 0; i < extrinsic_file_candidates.size(); ++i)
 	{
 		std::vector<std::string> file_name_and_ext;
 
 		SplitString(extrinsic_file_candidates[i], file_name_and_ext, '.');
+
+		std::cout << extrinsic_file_candidates[i] << std::endl;
 
 		if (file_name_and_ext.back() == "log")
 		{
@@ -156,8 +160,8 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, flo
 
 	if (extrinsic_file == "")
 	{
-		ErrorLogger::LOG_ERROR("No extrinsics file detected!");
-		
+		E_LOG("No extrinsics file detected!", false);
+
 		return false;
 	}
 

@@ -13,6 +13,7 @@
 #include "open3d/Open3D.h"
 #include "open3d/io/sensor/azure_kinect/MKVMetadata.h"
 #include "open3d/geometry/RGBDImage.h"
+#include "ErrorLogger.h"
 
 using namespace uvpcore;
 using namespace open3d;
@@ -82,7 +83,7 @@ class TextureUnpacker
             m_ReceivedMessages.push_back(pMsg);
         }
 
-
+        
     public:
         UvpOpExecutorT(bool debugMode) :
             m_DebugMode(debugMode)
@@ -110,7 +111,7 @@ class TextureUnpacker
 
                 if (pValidationResult)
                 {
-                    throw std::runtime_error("Operation input validation failed: " + std::string(pValidationResult));
+                    E_LOG("Operation input validation failed: " + std::string(pValidationResult), true);
                 }
             }
 
@@ -128,10 +129,55 @@ class TextureUnpacker
         }
     };
     
-public:
-    bool UnpackTexture(geometry::Image& im, geometry::TriangleMesh& mesh, bool debug);
+    void islandSolutionToMatrix(const UvpIslandPackSolutionT& islandSolution, Eigen::Matrix4d& mat)
+    {
+        // Generate matrix used to transform UVs of the given island in order to apply
+        // a packing result
+        mat = Eigen::Matrix4d::Identity();
+        Eigen::Matrix4d rotZmat = Eigen::Matrix4d::Identity();
 
-    bool PerformTextureUnpack(geometry::Image& im, geometry::TriangleMesh& mesh, bool debug_info);
+        mat.block<1, 1>(0, 3)[0] += islandSolution.m_PostScaleOffset[0];
+        mat.block<1, 1>(1, 3)[0] += islandSolution.m_PostScaleOffset[1];
+
+        mat.block<1, 1>(0, 0)[0] *= 1.0 / islandSolution.m_Scale;
+        mat.block<1, 1>(1, 1)[0] *= 1.0 / islandSolution.m_Scale;
+
+        mat.block<1, 1>(0, 3)[0] += islandSolution.m_Offset[0];
+        mat.block<1, 1>(1, 3)[0] += islandSolution.m_Offset[1];
+
+        mat.block<1, 1>(0, 3)[0] += islandSolution.m_Pivot[0];
+        mat.block<1, 1>(1, 3)[0] += islandSolution.m_Pivot[1];
+
+        auto ca = cos(islandSolution.m_Angle);
+        auto sa = sin(islandSolution.m_Angle);
+
+        rotZmat.block<1, 1>(0, 0)[0] *= ca;
+        rotZmat.block<1, 1>(1, 1)[0] *= ca;
+        rotZmat.block<1, 1>(0, 1)[0] *= -sa;
+        rotZmat.block<1, 1>(1, 0)[0] *= sa;
+
+        mat = rotZmat * mat;
+
+        mat.block<1, 1>(0, 3)[0] -= islandSolution.m_Pivot[0];
+        mat.block<1, 1>(1, 3)[0] -= islandSolution.m_Pivot[1];
+
+        mat.block<1, 1>(0, 3)[0] *= islandSolution.m_PreScale;
+        mat.block<1, 1>(1, 3)[0] *= islandSolution.m_PreScale;
+
+        //mat4x4_identity(mat);
+        //mat4x4_translate_in_place(mat, islandSolution.m_PostScaleOffset[0], islandSolution.m_PostScaleOffset[1], 0.0);
+        //mat4x4_scale_aniso(mat, mat, 1.0 / islandSolution.m_Scale, 1.0 / islandSolution.m_Scale, 1.0);
+        //mat4x4_translate_in_place(mat, islandSolution.m_Offset[0], islandSolution.m_Offset[1], 0.0);
+        //mat4x4_translate_in_place(mat, islandSolution.m_Pivot[0], islandSolution.m_Pivot[1], 0.0);
+        //mat4x4_rotate_Z(mat, mat, islandSolution.m_Angle);
+        //mat4x4_translate_in_place(mat, -islandSolution.m_Pivot[0], -islandSolution.m_Pivot[1], 0.0);
+        //mat4x4_scale_aniso(mat, mat, islandSolution.m_PreScale, islandSolution.m_PreScale, 1.0);
+    }
+
+public:
+    bool PackUV(geometry::Image& im, geometry::TriangleMesh& mesh, bool debug);
+
+    bool PerformTextureUnpack(geometry::Image* im, geometry::TriangleMesh* mesh, bool debug_info);
 };
 
 inline void opExecutorMessageHandler(void* m_pMessageHandlerData, UvpMessageT* pMsg)

@@ -98,3 +98,5 @@ public:
 		return (*FP)(realArgs...);
 	}
 };
+
+#define E_LOG(msg, make_abort) ErrorLogger::LOG_ERROR(std::string(msg) + ", " + std::string(__func__) + ", " + std::to_string(__LINE__), make_abort);

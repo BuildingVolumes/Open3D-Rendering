@@ -11,7 +11,7 @@
 #include "open3d/geometry/RGBDImage.h"
 #include "ColorMapOptimizer.h"
 
-
+#include "TextureUnpacker.h"
 #include "AlembicWriter.h"
 
 #include <k4a/k4a.h>
@@ -425,7 +425,7 @@ namespace MKV_Rendering {
 
         //cm.LoadTypeLivescan(livescan_root_folder, 5);
         //cm.LoadTypeLivescan(livescan_single_image_test, 5);
-        cm.LoadTypeLivescan("convertedImages", 5);
+        cm.LoadTypeLivescan("july8-sync-rgbd_0/july8-sync-rgbd_0", 5);
 
         
         //CameraManager cm(images_root_folder, structure_file_name);
@@ -433,10 +433,10 @@ namespace MKV_Rendering {
         //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
-        //vgd.voxel_size = 9.f / 512.f;
+        vgd.voxel_size = 9.f / 512.f;
 
-        //uint64_t timestamp = 10900000; //Approximately 11 seconds in
-        uint64_t timestamp = 7900000; //Approximately 8 seconds in
+        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        //uint64_t timestamp = 7900000; //Approximately 8 seconds in
         //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
         //
         //std::cout << old_grid.HasVoxels() << std::endl;
@@ -464,13 +464,18 @@ namespace MKV_Rendering {
         //mesh_legacy = mesh_legacy->FilterSmoothLaplacian(25, 0.3);
         //mesh_legacy = mesh_legacy->FilterSmoothTaubin(25);
 
+        TextureUnpacker tu;
+
         auto stitched_image = ErrorLogger::EXECUTE(
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
         );
 
+        ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);
+
         DrawObject(*mesh_legacy);
 
-        open3d::io::WriteImageToPNG("StitchedImageTest.png", *stitched_image);
+        WriteOBJ("Hogue_08_07_2021.obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_08_07_2021.png", *stitched_image);
         
 
         //DrawMesh(*mesh_legacy);
