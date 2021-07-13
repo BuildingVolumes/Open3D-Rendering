@@ -5,6 +5,7 @@
 #include "MKV_Data.h"
 #include "Image_Data.h"
 #include "Livescan_Data.h"
+#include "TextureUnpacker.h"
 
 #include <fstream>
 
@@ -307,7 +308,7 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGrid(Vo
 	return voxel_grid;
 }
 
-std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh)//, float depth_epsilon)
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh, bool useTheBadTexturingMethod)//, float depth_epsilon)
 {
 	//If there are no cameras, throw an error
 	if (camera_data.size() <= 0)
@@ -514,8 +515,11 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 				uvz.x() /= (uvz.z() * (double)color_images[i].width_);
 
 				uvz.y() /= (uvz.z() * (double)color_images[i].height_);
-				uvz.y() += (double)i;
-				uvz.y() /= (double)camera_count;
+				if (useTheBadTexturingMethod)
+				{
+					uvz.y() += (double)i;
+					uvz.y() /= (double)camera_count;
+				}
 				uvz.y() = 1 - uvz.y();
 
 				//uvz.x() /= uvz.z();
@@ -526,17 +530,24 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		}
 	}
 
+	if (!useTheBadTexturingMethod)
+	{
+		TextureUnpacker tu;
+
+		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*to_return), mesh, true);
+	}
+
 	return to_return;
 }
 
-std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp)//, float depth_epsilon)
+std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp, bool useTheBadTexturingMethod)//, float depth_epsilon)
 {
 	for (auto cam : camera_data)
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 	}
 
-	return CreateUVMapAndTexture(mesh);// , depth_epsilon);
+	return CreateUVMapAndTexture(mesh, useTheBadTexturingMethod);// , depth_epsilon);
 }
 
 bool MKV_Rendering::CameraManager::CycleAllCamerasForward()

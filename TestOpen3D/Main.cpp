@@ -376,7 +376,7 @@ namespace MKV_Rendering {
             auto alembicMesh = cm.GetMesh(&vgd);
 
             auto legacyMesh = alembicMesh.ToLegacyTriangleMesh();
-            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh);
+            auto stitchedImage = cm.CreateUVMapAndTexture(&legacyMesh, true);
 
             //open3d::io::WriteImageToPNG("outputData/texture" + std::to_string(i) +".png", *stitchedImage);
             if (&alembicMesh != nullptr) {
@@ -434,7 +434,7 @@ namespace MKV_Rendering {
         //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
-        //vgd.voxel_size = 9.f / 512.f;
+        vgd.voxel_size = 9.f / 512.f;
 
         uint64_t timestamp = 21800000; //Approximately 22 seconds in
         //uint64_t timestamp = 7900000; //Approximately 8 seconds in
@@ -465,10 +465,10 @@ namespace MKV_Rendering {
         //mesh_legacy = mesh_legacy->FilterSmoothLaplacian(25, 0.3);
         //mesh_legacy = mesh_legacy->FilterSmoothTaubin(25);
 
-        TextureUnpacker tu;
+        //TextureUnpacker tu;
 
         auto stitched_image = ErrorLogger::EXECUTE(
-            "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp
+            "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp, false
         );
 
         //ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);

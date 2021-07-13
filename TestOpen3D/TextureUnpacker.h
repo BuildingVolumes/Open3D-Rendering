@@ -136,33 +136,33 @@ class TextureUnpacker
         mat = Eigen::Matrix4d::Identity();
         Eigen::Matrix4d rotZmat = Eigen::Matrix4d::Identity();
 
-        mat.block<1, 1>(0, 3)[0] += islandSolution.m_PostScaleOffset[0];
-        mat.block<1, 1>(1, 3)[0] += islandSolution.m_PostScaleOffset[1];
+        Eigen::Vector3d translate_in_place(islandSolution.m_PostScaleOffset[0], islandSolution.m_PostScaleOffset[1], 0.0f);
 
-        mat.block<1, 1>(0, 0)[0] *= 1.0 / islandSolution.m_Scale;
-        mat.block<1, 1>(1, 1)[0] *= 1.0 / islandSolution.m_Scale;
+        mat.block<3, 1>(0, 3) += mat.block<3, 3>(0, 0) * translate_in_place;
 
-        mat.block<1, 1>(0, 3)[0] += islandSolution.m_Offset[0];
-        mat.block<1, 1>(1, 3)[0] += islandSolution.m_Offset[1];
+        mat.block<3, 1>(0, 0) *= 1.0 / islandSolution.m_Scale;
+        mat.block<3, 1>(0, 1) *= 1.0 / islandSolution.m_Scale;
 
-        mat.block<1, 1>(0, 3)[0] += islandSolution.m_Pivot[0];
-        mat.block<1, 1>(1, 3)[0] += islandSolution.m_Pivot[1];
+        translate_in_place = Eigen::Vector3d(islandSolution.m_Offset[0], islandSolution.m_Offset[1], 0.0f);
+        mat.block<3, 1>(0, 3) += mat.block<3, 3>(0, 0) * translate_in_place;
 
-        auto ca = cos(islandSolution.m_Angle * M_PI / 180.0);
-        auto sa = sin(islandSolution.m_Angle * M_PI / 180.0);
+        translate_in_place = Eigen::Vector3d(islandSolution.m_Pivot[0], islandSolution.m_Pivot[1], 0.0f);
+        mat.block<3, 1>(0, 3) += mat.block<3, 3>(0, 0) * translate_in_place;
 
-        rotZmat.block<1, 1>(0, 0)[0] *= ca;
-        rotZmat.block<1, 1>(1, 1)[0] *= ca;
-        rotZmat.block<1, 1>(0, 1)[0] *= -sa;
-        rotZmat.block<1, 1>(1, 0)[0] *= sa;
+        auto ca = cos(islandSolution.m_Angle);
+        auto sa = sin(islandSolution.m_Angle);
 
-        mat = rotZmat * mat;
+        rotZmat.block<1, 1>(0, 0)[0] = ca;
+        rotZmat.block<1, 1>(1, 1)[0] = ca;
+        rotZmat.block<1, 1>(0, 1)[0] = -sa;
+        rotZmat.block<1, 1>(1, 0)[0] = sa;
 
-        mat.block<1, 1>(0, 3)[0] -= islandSolution.m_Pivot[0];
-        mat.block<1, 1>(1, 3)[0] -= islandSolution.m_Pivot[1];
+        mat = mat * rotZmat;
 
-        mat.block<1, 1>(0, 3)[0] *= islandSolution.m_PreScale;
-        mat.block<1, 1>(1, 3)[0] *= islandSolution.m_PreScale;
+        mat.block<3, 1>(0, 3) -= mat.block<3, 3>(0, 0) * translate_in_place;
+
+        mat.block<3, 1>(0, 0) *= islandSolution.m_PreScale;
+        mat.block<3, 1>(0, 1) *= islandSolution.m_PreScale;
 
         //mat4x4_identity(mat);
         //mat4x4_translate_in_place(mat, islandSolution.m_PostScaleOffset[0], islandSolution.m_PostScaleOffset[1], 0.0);

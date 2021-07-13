@@ -34,9 +34,9 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TSDFVoxelGrid GetVoxelGrid(VoxelGridData* data);
 
-		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh);//, float depth_epsilon = 0.01f);
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTexture(open3d::geometry::TriangleMesh* mesh, bool useTheBadTexturingMethod);//, float depth_epsilon = 0.01f);
 
-		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp);// , float depth_epsilon);
+		std::shared_ptr<open3d::geometry::Image> CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp, bool useTheBadTexturingMethod);// , float depth_epsilon);
 
 		bool CycleAllCamerasForward();
 
