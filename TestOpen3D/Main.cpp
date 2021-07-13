@@ -425,7 +425,8 @@ namespace MKV_Rendering {
 
         //cm.LoadTypeLivescan(livescan_root_folder, 5);
         //cm.LoadTypeLivescan(livescan_single_image_test, 5);
-        cm.LoadTypeLivescan("july8-sync-rgbd_0/july8-sync-rgbd_0", 5);
+        cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "july8-afternoon_0/MATTES", 5);
+        //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "", 5);
 
         
         //CameraManager cm(images_root_folder, structure_file_name);
@@ -433,9 +434,9 @@ namespace MKV_Rendering {
         //CameraManager cm(images_root_folder, structure_file_name);
 
         VoxelGridData vgd; //Edit values to toy with voxel grid settings
-        vgd.voxel_size = 9.f / 512.f;
+        //vgd.voxel_size = 9.f / 512.f;
 
-        uint64_t timestamp = 10900000; //Approximately 11 seconds in
+        uint64_t timestamp = 21800000; //Approximately 22 seconds in
         //uint64_t timestamp = 7900000; //Approximately 8 seconds in
         //auto old_grid = ErrorLogger::EXECUTE("Get Old voxel Grid", &cm, &CameraManager::GetOldVoxelGrid, &vgd);
         //
@@ -474,8 +475,8 @@ namespace MKV_Rendering {
 
         DrawObject(*mesh_legacy);
 
-        WriteOBJ("Hogue_08_07_2021.obj", "", &(*mesh_legacy));
-        open3d::io::WriteImageToPNG("Hogue_08_07_2021.png", *stitched_image);
+        WriteOBJ("Hogue_07_13_2021.obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_07_13_2021.png", *stitched_image);
         
 
         //DrawMesh(*mesh_legacy);

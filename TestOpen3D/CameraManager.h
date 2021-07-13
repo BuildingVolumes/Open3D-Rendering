@@ -22,7 +22,7 @@ namespace MKV_Rendering {
 
 		bool LoadTypeStructure(std::string root_folder, std::string structure_file_name);
 
-		bool LoadTypeLivescan(std::string root_folder, float FPS);
+		bool LoadTypeLivescan(std::string image_root_folder, std::string matte_root_folder, float FPS);
 
 		~CameraManager();
 

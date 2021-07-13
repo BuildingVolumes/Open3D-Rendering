@@ -15,8 +15,11 @@ namespace MKV_Rendering {
 	{		
 		std::map<int, std::string> color_files;
 		std::map<int, std::string> depth_files;
+		std::map<int, std::string> matte_files;
 
 		std::vector<std::string> extrinsic_individual;
+
+		std::string matte_folder_name;
 
 		std::string intrinsics_file;
 
@@ -35,7 +38,7 @@ namespace MKV_Rendering {
 
 		open3d::geometry::Image TransformDepth(open3d::geometry::Image* old_depth, open3d::geometry::Image* color);
 	public:
-		Livescan_Data(std::string data_folder, std::vector<std::string> &extrinsics, double FPS);
+		Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string> &extrinsics, double FPS);
 		~Livescan_Data();
 
 		uint64_t GetCaptureTimestamp();

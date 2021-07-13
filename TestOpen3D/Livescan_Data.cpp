@@ -39,33 +39,26 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 			std::cout << s << std::endl;
 			intrinsics_file = s;
 		}
-
-		//if (split_extension.back() == "png")
-		//{
-		//	std::vector<std::string> split_num;
-		//	SplitString(split_extension.front(), split_num, '_');
-		//	int loc = std::stoi(split_num.back());
-		//
-		//	
-		//	if (split_num.front().compare(split_num.front().size() - 5, 5, "color") == 0)
-		//	{
-		//		std::cout << split_num.front() << ", " << s << " added to color" << std::endl;
-		//
-		//		color_files[loc] = s;
-		//	}
-		//	else
-		//	{
-		//		std::cout << split_num.front() << ", " << s << " added to depth" << std::endl;
-		//
-		//		depth_files[loc] = s;
-		//	}
-		//}
-		//else if (split_extension.back() == "json")
-		//{
-		//	std::cout << s << std::endl;
-		//	intrinsics_file = s;
-		//}
 	}
+
+	if (matte_folder_name != "")
+	{
+		std::vector<std::string> all_mattes;
+
+		open3d::utility::filesystem::ListFilesInDirectory(matte_folder_name, all_mattes);
+
+		for (auto s : all_mattes)
+		{
+			std::vector<std::string> split_extension;
+			SplitString(s, split_extension, '.');
+
+			std::vector<std::string> split_num;
+			SplitString(split_extension.front(), split_num, '_');
+			int loc = std::stoi(split_num.back());
+			matte_files[loc] = s;
+		}
+	}
+
 }
 
 void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
@@ -165,11 +158,33 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 	k4a_image_release(k4a_depth);
 	k4a_image_release(k4a_transformed_depth);
 
+	if (matte_folder_name != "")
+	{
+		std::cout << "applying matte..." << std::endl;
+
+		open3d::geometry::Image matte = (*open3d::t::io::CreateImageFromFile(matte_files.lower_bound(current_frame)->second)).ToLegacyImage();
+
+		std::cout << matte.bytes_per_channel_ << ", " << matte.num_of_channels_ << std::endl;
+
+#ifdef _WIN32
+#pragma omp parallel for schedule(static)
+#else
+#pragma omp parallel for collapse(3) schedule(static)
+#endif
+		for (int v = 0; v < new_depth.height_; ++v) {
+			for (int u = 0; u < new_depth.width_; ++u) {
+				(*new_depth.PointerAt<uint16_t>(u, v)) = ((*matte.PointerAt<uint8_t>(u, v, 0)) > 0) ? (*new_depth.PointerAt<uint16_t>(u, v)) : uint16_t(0);
+			}
+		}
+	}
+
 	return new_depth;
 }
 
-MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::vector<std::string>& extrinsics, double FPS) : Abstract_Data(data_folder), FPS(FPS)
+MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, double FPS) : Abstract_Data(data_folder), FPS(FPS)
 {
+	matte_folder_name = matte_folder;
+
 	for (auto s : extrinsics)
 	{
 		std::vector<std::string> split;

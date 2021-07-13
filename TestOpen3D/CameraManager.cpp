@@ -128,7 +128,7 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 	return true;
 }
 
-bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, float FPS)
+bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string image_root_folder, std::string matte_root_folder, float FPS)
 {
 	if (loaded)
 	{
@@ -139,9 +139,9 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, flo
 	std::vector<std::string> extrinsic_file_candidates;
 	std::string extrinsic_file = "";
 
-	open3d::utility::filesystem::ListFilesInDirectory(root_folder, extrinsic_file_candidates);
+	open3d::utility::filesystem::ListFilesInDirectory(image_root_folder, extrinsic_file_candidates);
 
-	std::cout << root_folder << std::endl;
+	std::cout << image_root_folder << std::endl;
 
 	for (int i = 0; i < extrinsic_file_candidates.size(); ++i)
 	{
@@ -165,8 +165,14 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, flo
 		return false;
 	}
 
-	std::vector<std::string> all_folders = GetDirectories(root_folder);
-	//open3d::utility::filesystem::ListFilesInDirectory(root_folder, all_folders);
+	std::vector<std::string> all_folders = GetDirectories(image_root_folder);
+	std::vector<std::string> matte_folders;
+
+	if (matte_root_folder != "")
+	{
+		std::cout << "Matte found: " << matte_root_folder << std::endl;
+		matte_folders = GetDirectories(matte_root_folder);
+	}
 
 	std::fstream extrinsics_filestream;
 	extrinsics_filestream.open(extrinsic_file);
@@ -199,8 +205,15 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string root_folder, flo
 			extrinsics_string.push_back(parser);
 		}
 
+		std::string _matte = "";
+
+		if (matte_root_folder != "")
+		{
+			_matte = matte_folders[i];
+		}
+
 		camera_data.push_back(new Livescan_Data(
-			_folder,
+			_folder, _matte,
 			extrinsics_string,
 			FPS
 		));
