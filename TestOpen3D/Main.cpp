@@ -471,12 +471,14 @@ namespace MKV_Rendering {
             "Generate Stitched Image And UVs", &cm, &CameraManager::CreateUVMapAndTextureAtTimestamp, &(*mesh_legacy), timestamp, false
         );
 
+        DrawObject(*stitched_image);
+
         //ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);
 
         DrawObject(*mesh_legacy);
 
-        WriteOBJ("Hogue_07_13_2021.obj", "", &(*mesh_legacy));
-        open3d::io::WriteImageToPNG("Hogue_07_13_2021.png", *stitched_image);
+        WriteOBJ("Hogue_07_14_2021.obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_07_14_2021.png", *stitched_image);
         
 
         //DrawMesh(*mesh_legacy);

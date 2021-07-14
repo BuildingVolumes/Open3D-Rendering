@@ -328,18 +328,6 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		depth_images.push_back(*(rgbd_im->depth_.ConvertDepthToFloatImage()));
 	}
 
-	auto to_return = std::make_shared<open3d::geometry::Image>(open3d::geometry::Image());
-
-	//Combine all the image data into one
-	for (int i = 0; i < color_images.size(); ++i)
-	{
-		to_return->data_.insert(to_return->data_.begin() + to_return->data_.size(), color_images[i].data_.begin(), color_images[i].data_.end());
-	}
-
-	to_return->height_ = color_images[0].height_ * color_images.size();
-	to_return->width_ = color_images[0].width_;
-	to_return->bytes_per_channel_ = color_images[0].bytes_per_channel_;
-	to_return->num_of_channels_ = color_images[0].num_of_channels_;
 
 
 	int camera_count = camera_data.size();	
@@ -534,10 +522,34 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		TextureUnpacker tu;
 
-		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*to_return), mesh, true);
-	}
+		auto better_texture = std::make_shared<open3d::geometry::Image>();
+		better_texture->width_ = color_images[0].width_;
+		better_texture->height_ = color_images[0].height_;
+		better_texture->bytes_per_channel_ = color_images[0].bytes_per_channel_;
+		better_texture->num_of_channels_ = color_images[0].num_of_channels_;
+		better_texture->data_.resize(better_texture->width_ * better_texture->height_ * better_texture->num_of_channels_ * better_texture->bytes_per_channel_);
 
-	return to_return;
+		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &color_images, mesh, &(*better_texture), true);
+
+		return better_texture;
+	}
+	else
+	{
+		auto to_return = std::make_shared<open3d::geometry::Image>(open3d::geometry::Image());
+
+		//Combine all the image data into one
+		for (int i = 0; i < color_images.size(); ++i)
+		{
+			to_return->data_.insert(to_return->data_.begin() + to_return->data_.size(), color_images[i].data_.begin(), color_images[i].data_.end());
+		}
+
+		to_return->height_ = color_images[0].height_ * color_images.size();
+		to_return->width_ = color_images[0].width_;
+		to_return->bytes_per_channel_ = color_images[0].bytes_per_channel_;
+		to_return->num_of_channels_ = color_images[0].num_of_channels_;
+
+		return to_return;
+	}
 }
 
 std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp, bool useTheBadTexturingMethod)//, float depth_epsilon)

@@ -63,7 +63,15 @@ bool TextureUnpacker::PackUV(geometry::Image& im, geometry::TriangleMesh& mesh, 
 	return false;
 }
 
-bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::TriangleMesh* mesh, bool debug_info)
+/// <summary>
+/// Packs UVs into a confined space and produces an output texture map
+/// </summary>
+/// <param name="im">Reference image consisting of all reference textures combined</param>
+/// <param name="mesh">Mesh with UVs to unpack</param>
+/// <param name="outputImage">Output texture. Resize this to the desired height/width/channels/etc before sending it to this function.</param>
+/// <param name="debug_info">Whether or not to debug additional information - highly inefficient, only use to debug</param>
+/// <returns></returns>
+bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>* color_array, geometry::TriangleMesh* mesh, geometry::Image* outputImage, bool debug_info)
 {
     UvpOperationInputT uvpInput;
 
@@ -79,6 +87,7 @@ bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::Triang
     UvpOperationInputT reportVersionInput;
     reportVersionInput.m_Opcode = UVP_OPCODE::REPORT_VERSION;
 
+    //Confirm version
     if (opExecutor.execute(reportVersionInput) != UVP_ERRORCODE::SUCCESS)
     {
         ErrorLogger::LOG_ERROR("Report version op failed");
@@ -103,6 +112,7 @@ bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::Triang
         std::cout << "ID: " << devDesc.m_Id.c_str() << ", NAME: " << devDesc.m_Name.c_str() << ", SUPPORTED: " << devDesc.m_Supported << "\n";
     }
 
+    //Create data to send to the algorithm
     int m_PolyVertexCount;
 
     std::vector<UvVertT> m_VertArray;
@@ -148,6 +158,7 @@ bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::Triang
 
     std::cout << "Unpacking..." << std::endl;
 
+    //The algorithm
     auto return_val = opExecutor.execute(uvpInput);
 
     if (return_val != UVP_ERRORCODE::SUCCESS)
@@ -164,78 +175,105 @@ bool TextureUnpacker::PerformTextureUnpack(geometry::Image* im, geometry::Triang
     const UvpIslandsMessageT* pIslandsMsg = static_cast<const UvpIslandsMessageT*>(opExecutor.getLastMessage(UvpMessageT::MESSAGE_CODE::ISLANDS));
     const UvpPackSolutionMessageT* pPackSolutionMsg = static_cast<const UvpPackSolutionMessageT*>(opExecutor.getLastMessage(UvpMessageT::MESSAGE_CODE::PACK_SOLUTION));
     
+    std::vector<Eigen::Matrix4d> island_matrices;
+    std::vector<int> uv_solution;
 
-    //REAPPLY UVS
-    //std::vector<FbxVector2> transformedUvs(m_VertArray.size());
-    //
-    //// Initially copy the original UV coordinates.
-    //for (int i = 0; i < m_VertArray.size(); i++)
-    //{
-    //    const auto& origVert = m_VertArray[i];
-    //    transformedUvs[i] = FbxVector2(origVert.m_UvCoords[0], origVert.m_UvCoords[1]);
-    //}
-    //
-    //// Transform UV coordinates accordingly
+    uv_solution.resize(mesh->triangle_uvs_.size());
+
+    double w = (double)outputImage->width_;
+    double h = (double)outputImage->height_;
+
+    double w2 = (double)color_array->at(0).width_;
+    double h2 = (double)color_array->at(0).height_;
+
+    double step = 1.0 / sqrt(2.0);
+
+    //Re-apply UVs
     const auto& islands = pIslandsMsg->m_Islands;
     for (const UvpIslandPackSolutionT& islandSolution : pPackSolutionMsg->m_IslandSolutions)
     {
         const IdxArrayT& island = islands[islandSolution.m_IslandIdx];
         Eigen::Matrix4d solutionMatrix;
         islandSolutionToMatrix(islandSolution, solutionMatrix);
-    
+
         for (int faceId : island)
         {
             const UvFaceT& face = m_FaceArray[faceId];
-    
+
+            int source_image = mesh->triangle_material_ids_[faceId];
+
+            auto baryc2_A = mesh->triangle_uvs_[face.m_Verts[0]];
+            baryc2_A.x() *= w2;
+            baryc2_A.y() *= h2;
+
+            auto baryc2_B = mesh->triangle_uvs_[face.m_Verts[1]];
+            baryc2_B.x() *= w2;
+            baryc2_B.y() *= h2;
+
+            auto baryc2_C = mesh->triangle_uvs_[face.m_Verts[2]];
+            baryc2_C.x() *= w2;
+            baryc2_C.y() *= h2;
+
             for (int vertIdx : face.m_Verts)
             {
                 const UvVertT& origVert = m_VertArray[vertIdx];
-                //vec4 inputUv = { origVert.m_UvCoords[0], origVert.m_UvCoords[1], 0.0, 1.0 };
-                //vec4 transformedUv;
 
                 Eigen::Vector4d transformedUV = solutionMatrix * Eigen::Vector4d(origVert.m_UvCoords[0], origVert.m_UvCoords[1], 0.0, 1.0);
-    
-                //mat4x4_mul_vec4(transformedUv, solutionMatrix, inputUv);
-                //transformedUvs[vertIdx] = FbxVector2(transformedUv[0] / transformedUv[3], transformedUv[1] / transformedUv[3]);
 
                 mesh->triangle_uvs_[vertIdx].x() = transformedUV.x();
                 mesh->triangle_uvs_[vertIdx].y() = transformedUV.y();
+                uv_solution[vertIdx] = island_matrices.size();
+            }
+
+            auto baryc_A = mesh->triangle_uvs_[face.m_Verts[0]];
+            baryc_A.x() *= w;
+            baryc_A.y() *= h;
+
+            auto baryc_B = mesh->triangle_uvs_[face.m_Verts[1]];
+            baryc_B.x() *= w;
+            baryc_B.y() *= h;
+
+            auto baryc_C = mesh->triangle_uvs_[face.m_Verts[2]];
+            baryc_C.x() *= w;
+            baryc_C.y() *= h;
+
+            Eigen::Vector2d baryc_dim_a = baryc_A - baryc_B;
+            Eigen::Vector2d baryc_dim_b = baryc_A - baryc_C;
+
+            float baryc_max_a = std::max(abs(baryc_dim_a.x()), abs(baryc_dim_a.y()));
+            float baryc_max_b = std::max(abs(baryc_dim_b.x()), abs(baryc_dim_b.y()));
+
+            double baryc_step_a = step / baryc_max_a;
+            double baryc_step_b = step / baryc_max_b;
+
+            for (double baryc_alpha = 0.0; baryc_alpha < 1.0; baryc_alpha += baryc_step_a)
+            {
+                for (double baryc_beta = 0.0; baryc_beta < 1.0 - baryc_alpha; baryc_beta += baryc_step_b)
+                {
+                    double mA = (1 - baryc_alpha - baryc_beta);
+                    double mB = baryc_alpha;
+                    double mC = baryc_beta;
+
+                    Eigen::Vector2d pixel1 = baryc_A * mA + baryc_B * mB + baryc_C * mC;
+                    Eigen::Vector2d pixel2 = baryc2_A * mA + baryc2_B * mB + baryc2_C * mC;
+
+                    int u1 = pixel1.x();
+                    int v1 = pixel1.y();
+                    int u2 = pixel2.x();
+                    int v2 = pixel2.y();
+
+                    v1 = h - v1 - 1;
+                    v2 = h2 - v2 - 1;
+
+                    (*outputImage->PointerAt<uint8_t>(u1, v1, 0)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    (*outputImage->PointerAt<uint8_t>(u1, v1, 1)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    (*outputImage->PointerAt<uint8_t>(u1, v1, 2)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                }
             }
         }
+
+        island_matrices.push_back(solutionMatrix);
     }
-    //
-    //const bool useIndex = m_pUvElement->GetReferenceMode() != FbxGeometryElement::eDirect;
-    //
-    //if (useIndex)
-    //{
-    //    m_pUvElement->GetIndexArray().Resize(m_PolyVertexCount);
-    //    m_pUvElement->GetDirectArray().Resize(transformedUvs.size());
-    //}
-    //else
-    //{
-    //    m_pUvElement->GetDirectArray().Resize(m_PolyVertexCount);
-    //}
-    //
-    //int polyIdxCounter = 0;
-    //
-    //for (const UvFaceT& uvFace : m_FaceArray)
-    //{
-    //    for (const int vertIdx : uvFace.m_Verts)
-    //    {
-    //        if (useIndex)
-    //        {
-    //            m_pUvElement->GetIndexArray().SetAt(polyIdxCounter, vertIdx);
-    //            m_pUvElement->GetDirectArray().SetAt(vertIdx, transformedUvs[vertIdx]);
-    //        }
-    //        else
-    //        {
-    //            m_pUvElement->GetDirectArray().SetAt(polyIdxCounter, transformedUvs[vertIdx]);
-    //        }
-    //
-    //        polyIdxCounter++;
-    //    }
-    //}
-    //fbxWrapper.saveToFile(pOutFilePath);
 
     return true;
 }

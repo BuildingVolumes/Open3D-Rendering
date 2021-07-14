@@ -177,7 +177,7 @@ class TextureUnpacker
 public:
     bool PackUV(geometry::Image& im, geometry::TriangleMesh& mesh, bool debug);
 
-    bool PerformTextureUnpack(geometry::Image* im, geometry::TriangleMesh* mesh, bool debug_info);
+    bool PerformTextureUnpack(std::vector<open3d::geometry::Image>* color_array, geometry::TriangleMesh* mesh, geometry::Image* outputImage, bool debug_info);
 };
 
 inline void opExecutorMessageHandler(void* m_pMessageHandlerData, UvpMessageT* pMsg)
