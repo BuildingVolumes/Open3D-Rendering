@@ -415,7 +415,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 					break;
 				}
 
-				depth_delta += abs(depth - uvz.z());// / cos(acos(normal_dot) * 0.5f);
+				depth_delta += std::min(abs(depth - uvz.z()), (-normal_dot * 0.5f + 0.5));
 			}
 
 			if (bad_camera)
@@ -449,6 +449,12 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	}
 
 	std::cout << "There were " << withoutUV << "/" << mesh->triangles_.size() << " triangles without UV coordinates" << std::endl;
+
+	if (withoutUV > 0)
+	{
+		std::cout << "WARNING: There were triangles without UVs. Press any key to continue anyways." << std::endl;
+		system("pause");
+	}
 
 	//Not ultimately necessary, but it's nice to be certain
 	mesh->triangle_uvs_.clear();
@@ -524,8 +530,8 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		TextureUnpacker tu;
 
 		auto better_texture = std::make_shared<open3d::geometry::Image>();
-		better_texture->width_ = color_images[0].width_;
-		better_texture->height_ = color_images[0].height_;
+		better_texture->width_ = 1920; // color_images[0].width_;
+		better_texture->height_ = 1080; // color_images[0].height_;
 		better_texture->bytes_per_channel_ = color_images[0].bytes_per_channel_;
 		better_texture->num_of_channels_ = color_images[0].num_of_channels_;
 		better_texture->data_.resize(better_texture->width_ * better_texture->height_ * better_texture->num_of_channels_ * better_texture->bytes_per_channel_);

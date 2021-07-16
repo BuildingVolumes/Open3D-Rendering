@@ -165,11 +165,13 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
     {
         std::cout << "Error type: " << (int)return_val << std::endl;
         E_LOG("Packing operation failed", true);
+        return false;
     }
 
     if (!opExecutor.getLastMessage(UvpMessageT::MESSAGE_CODE::ISLANDS) || !opExecutor.getLastMessage(UvpMessageT::MESSAGE_CODE::PACK_SOLUTION))
     {
         E_LOG("Expected UVP messages not found", true);
+        return false;
     }
     
     const UvpIslandsMessageT* pIslandsMsg = static_cast<const UvpIslandsMessageT*>(opExecutor.getLastMessage(UvpMessageT::MESSAGE_CODE::ISLANDS));
