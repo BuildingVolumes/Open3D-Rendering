@@ -20,14 +20,14 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 		std::vector<std::string> split_extension;
 		SplitString(s, split_extension, '.');
 
-		if (split_extension.back() == "jpg")
+		if ((split_extension.front().find("Color_") != std::string::npos) && (split_extension.back() == "jpg"))
 		{
 			std::vector<std::string> split_num;
 			SplitString(split_extension.front(), split_num, '_');
 			int loc = std::stoi(split_num.back());
 			color_files[loc] = s;
 		}
-		else if (split_extension.back() == "png")
+		else if ((split_extension.front().find("Depth_") != std::string::npos) && (split_extension.back() == "png"))
 		{
 			std::vector<std::string> split_num;
 			SplitString(split_extension.front(), split_num, '_');
@@ -52,10 +52,13 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 			std::vector<std::string> split_extension;
 			SplitString(s, split_extension, '.');
 
-			std::vector<std::string> split_num;
-			SplitString(split_extension.front(), split_num, '_');
-			int loc = std::stoi(split_num.back());
-			matte_files[loc] = s;
+			if (s.find("matte") != std::string::npos)
+			{
+				std::vector<std::string> split_num;
+				SplitString(split_extension.front(), split_num, '_');
+				int loc = std::stoi(split_num.back());
+				matte_files[loc] = s;
+			}
 		}
 	}
 
@@ -160,7 +163,7 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 
 	if (matte_folder_name != "")
 	{
-		std::cout << "applying matte..." << std::endl;
+		std::cout << "applying matte:\t\t" << matte_files.lower_bound(current_frame)->second << std::endl;
 
 		open3d::geometry::Image matte = (*open3d::t::io::CreateImageFromFile(matte_files.lower_bound(current_frame)->second)).ToLegacyImage();
 
