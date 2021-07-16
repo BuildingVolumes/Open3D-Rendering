@@ -188,6 +188,12 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
 
     double step = 1.0 / sqrt(2.0);
 
+    std::vector<Eigen::Vector2d> baryc;
+    std::vector<Eigen::Vector2d> baryc2;
+
+    baryc.resize(3);
+    baryc2.resize(3);
+
     //Re-apply UVs
     const auto& islands = pIslandsMsg->m_Islands;
     for (const UvpIslandPackSolutionT& islandSolution : pPackSolutionMsg->m_IslandSolutions)
@@ -202,43 +208,29 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
 
             int source_image = mesh->triangle_material_ids_[faceId];
 
-            auto baryc2_A = mesh->triangle_uvs_[face.m_Verts[0]];
-            baryc2_A.x() *= w2;
-            baryc2_A.y() *= h2;
-
-            auto baryc2_B = mesh->triangle_uvs_[face.m_Verts[1]];
-            baryc2_B.x() *= w2;
-            baryc2_B.y() *= h2;
-
-            auto baryc2_C = mesh->triangle_uvs_[face.m_Verts[2]];
-            baryc2_C.x() *= w2;
-            baryc2_C.y() *= h2;
+            int v_num = 0;
 
             for (int vertIdx : face.m_Verts)
             {
                 const UvVertT& origVert = m_VertArray[vertIdx];
+
+                baryc2[v_num].x() = origVert.m_UvCoords[0] * w2;
+                baryc2[v_num].y() = origVert.m_UvCoords[1] * h2;
 
                 Eigen::Vector4d transformedUV = solutionMatrix * Eigen::Vector4d(origVert.m_UvCoords[0], origVert.m_UvCoords[1], 0.0, 1.0);
 
                 mesh->triangle_uvs_[vertIdx].x() = transformedUV.x();
                 mesh->triangle_uvs_[vertIdx].y() = transformedUV.y();
                 uv_solution[vertIdx] = island_matrices.size();
+
+                baryc[v_num].x() = transformedUV.x() * w;
+                baryc[v_num].y() = transformedUV.y() * h;
+
+                ++v_num;
             }
 
-            auto baryc_A = mesh->triangle_uvs_[face.m_Verts[0]];
-            baryc_A.x() *= w;
-            baryc_A.y() *= h;
-
-            auto baryc_B = mesh->triangle_uvs_[face.m_Verts[1]];
-            baryc_B.x() *= w;
-            baryc_B.y() *= h;
-
-            auto baryc_C = mesh->triangle_uvs_[face.m_Verts[2]];
-            baryc_C.x() *= w;
-            baryc_C.y() *= h;
-
-            Eigen::Vector2d baryc_dim_a = baryc_A - baryc_B;
-            Eigen::Vector2d baryc_dim_b = baryc_A - baryc_C;
+            Eigen::Vector2d baryc_dim_a = baryc[0] - baryc[1];
+            Eigen::Vector2d baryc_dim_b = baryc[0] - baryc[2];
 
             float baryc_max_a = std::max(abs(baryc_dim_a.x()), abs(baryc_dim_a.y()));
             float baryc_max_b = std::max(abs(baryc_dim_b.x()), abs(baryc_dim_b.y()));
@@ -250,17 +242,17 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
             {
                 for (double baryc_beta = 0.0; baryc_beta < 1.0 - baryc_alpha; baryc_beta += baryc_step_b)
                 {
-                    double mA = (1 - baryc_alpha - baryc_beta);
-                    double mB = baryc_alpha;
-                    double mC = baryc_beta;
+                    double m0 = (1.0 - baryc_alpha - baryc_beta);
+                    double m1 = baryc_alpha;
+                    double m2 = baryc_beta;
 
-                    Eigen::Vector2d pixel1 = baryc_A * mA + baryc_B * mB + baryc_C * mC;
-                    Eigen::Vector2d pixel2 = baryc2_A * mA + baryc2_B * mB + baryc2_C * mC;
+                    Eigen::Vector2d pixel1 = baryc[0] * m0 + baryc[1] * m1 + baryc[2] * m2;
+                    Eigen::Vector2d pixel2 = baryc2[0] * m0 + baryc2[1] * m1 + baryc2[2] * m2;
 
-                    int u1 = pixel1.x();
-                    int v1 = pixel1.y();
-                    int u2 = pixel2.x();
-                    int v2 = pixel2.y();
+                    int u1 = std::min(pixel1.x(), w - 1.0);
+                    int v1 = std::min(pixel1.y(), h - 1.0);
+                    int u2 = std::min(pixel2.x(), w2 - 1.0);
+                    int v2 = std::min(pixel2.y(), h2 - 1.0);
 
                     v1 = h - v1 - 1;
                     v2 = h2 - v2 - 1;

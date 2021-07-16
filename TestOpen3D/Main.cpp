@@ -477,8 +477,8 @@ namespace MKV_Rendering {
 
         DrawObject(*mesh_legacy);
 
-        WriteOBJ("Hogue_07_14_2021.obj", "", &(*mesh_legacy));
-        open3d::io::WriteImageToPNG("Hogue_07_14_2021.png", *stitched_image);
+        WriteOBJ("Hogue_07_16_2021.obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_07_16_2021.png", *stitched_image);
         
 
         //DrawMesh(*mesh_legacy);

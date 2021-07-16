@@ -501,14 +501,15 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 					(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
 
 				uvz.x() /= (uvz.z() * (double)color_images[i].width_);
-
 				uvz.y() /= (uvz.z() * (double)color_images[i].height_);
+
 				if (useTheBadTexturingMethod)
 				{
 					uvz.y() += (double)i;
 					uvz.y() /= (double)camera_count;
 				}
-				uvz.y() = 1 - uvz.y();
+
+				uvz.y() = 1.0 - uvz.y();
 
 				//uvz.x() /= uvz.z();
 				//uvz.y() /= uvz.z();
