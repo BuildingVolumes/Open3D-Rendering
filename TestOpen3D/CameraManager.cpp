@@ -6,6 +6,7 @@
 #include "Image_Data.h"
 #include "Livescan_Data.h"
 #include "TextureUnpacker.h"
+#include "MeshingVoxelGrid.h"
 
 #include <fstream>
 
@@ -216,7 +217,7 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string image_root_folde
 		camera_data.push_back(new Livescan_Data(
 			_folder, _matte,
 			extrinsics_string,
-			FPS
+			i, FPS
 		));
 	}
 
@@ -268,6 +269,28 @@ bool MKV_Rendering::CameraManager::Unload()
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGridData* data)
 {
 	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGrid, data).ExtractSurfaceMesh(0.0f);
+}
+
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGrid()
+{
+	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>(0.005, 201, 401, 201, Eigen::Vector3d(0, 0, 0));
+
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
+	}
+
+	return mvg->ExtractMesh();
+}
+
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGridAtTimestamp(uint64_t timestamp)
+{
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	return GetMeshUsingNewVoxelGrid();
 }
 
 open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelGridData *data)

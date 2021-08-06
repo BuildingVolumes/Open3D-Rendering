@@ -30,6 +30,10 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGrid();
+
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGridAtTimestamp(uint64_t timestamp);
+
 		open3d::geometry::VoxelGrid GetOldVoxelGrid(VoxelGridData* data);
 
 		open3d::t::geometry::TSDFVoxelGrid GetVoxelGrid(VoxelGridData* data);

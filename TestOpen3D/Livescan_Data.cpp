@@ -41,6 +41,11 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 		}
 	}
 
+	if (intrinsics_file == "")
+	{
+		E_LOG("No intrinsics json found!", true);
+	}
+
 	if (matte_folder_name != "")
 	{
 		std::vector<std::string> all_mattes;
@@ -181,11 +186,15 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 		}
 	}
 
+	DrawObject(*color);
+
 	return new_depth;
 }
 
-MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, double FPS) : Abstract_Data(data_folder), FPS(FPS)
+MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, int camera_ID, double FPS) : Abstract_Data(data_folder), FPS(FPS)
 {
+	this->camera_ID = camera_ID;
+
 	matte_folder_name = matte_folder;
 
 	for (auto s : extrinsics)
@@ -339,4 +348,16 @@ void MKV_Rendering::Livescan_Data::PackIntoOldVoxelGrid(open3d::geometry::VoxelG
 	auto params = GetParameters();
 
 	grid->CarveSilhouette(rgbd->depth_, params, true);
+}
+
+void MKV_Rendering::Livescan_Data::PackIntoNewVoxelGrid(MeshingVoxelGrid* grid)
+{
+	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second)).ToLegacyImage();
+	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
+
+	std::cout << "current frame: " << current_frame << "," << color_files.lower_bound(current_frame)->second << ", " << depth_files.lower_bound(current_frame)->second << std::endl;
+
+	auto transformed_depth = ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &depth, &color);
+
+	grid->AddImage(color, transformed_depth, extrinsic_mat, intrinsic_mat);
 }

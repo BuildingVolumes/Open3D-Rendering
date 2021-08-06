@@ -13,6 +13,8 @@
 namespace MKV_Rendering {
 	class Livescan_Data : public Abstract_Data
 	{		
+		int camera_ID;
+
 		std::map<int, std::string> color_files;
 		std::map<int, std::string> depth_files;
 		std::map<int, std::string> matte_files;
@@ -38,7 +40,7 @@ namespace MKV_Rendering {
 
 		open3d::geometry::Image TransformDepth(open3d::geometry::Image* old_depth, open3d::geometry::Image* color);
 	public:
-		Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string> &extrinsics, double FPS);
+		Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string> &extrinsics, int camera_ID, double FPS);
 		~Livescan_Data();
 
 		uint64_t GetCaptureTimestamp();
@@ -53,5 +55,7 @@ namespace MKV_Rendering {
 		void PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data);
 
 		void PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid);
+
+		void PackIntoNewVoxelGrid(MeshingVoxelGrid* grid);
 	};
 }

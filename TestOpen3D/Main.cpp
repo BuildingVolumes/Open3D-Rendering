@@ -426,7 +426,7 @@ namespace MKV_Rendering {
         //cm.LoadTypeLivescan(livescan_root_folder, 5);
         //cm.LoadTypeLivescan(livescan_single_image_test, 5);
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "july8-afternoon_0/MATTES", 5);
-        cm.LoadTypeLivescan("july15-spinninghogue_0", "july15-spinninghogue_0", 5);
+        cm.LoadTypeLivescan("_TEST_DATA/july15-spinninghogue_0", "_TEST_DATA/july15-spinninghogue_0", 5);
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "", 5);
 
         
@@ -456,11 +456,17 @@ namespace MKV_Rendering {
         //
         //return;
 
-        auto mesh = ErrorLogger::EXECUTE(
-            "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
+        //auto mesh = ErrorLogger::EXECUTE(
+        //    "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
+        //);
+        //
+        //auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+
+        auto mesh_legacy = ErrorLogger::EXECUTE(
+            "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, timestamp
         );
 
-        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+        DrawObject(*mesh_legacy);
 
         //mesh_legacy = mesh_legacy->FilterSmoothSimple(5);
         //mesh_legacy = mesh_legacy->FilterSmoothLaplacian(25, 0.3);
@@ -475,11 +481,6 @@ namespace MKV_Rendering {
         DrawObject(*stitched_image);
 
         //ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &(*stitched_image), &(*mesh_legacy), true);
-
-        DrawObject(*mesh_legacy);
-
-        mesh_legacy->textures_.clear();
-        mesh_legacy->textures_.push_back(*stitched_image);
 
         DrawObject(*mesh_legacy);
 
