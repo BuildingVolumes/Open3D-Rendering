@@ -456,15 +456,15 @@ namespace MKV_Rendering {
         //
         //return;
 
-        //auto mesh = ErrorLogger::EXECUTE(
-        //    "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
-        //);
-        //
-        //auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
-
-        auto mesh_legacy = ErrorLogger::EXECUTE(
-            "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, timestamp
+        auto mesh = ErrorLogger::EXECUTE(
+            "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
         );
+        
+        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+
+        //auto mesh_legacy = ErrorLogger::EXECUTE(
+        //    "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, timestamp
+        //);
 
         DrawObject(*mesh_legacy);
 

@@ -186,8 +186,6 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 		}
 	}
 
-	DrawObject(*color);
-
 	return new_depth;
 }
 

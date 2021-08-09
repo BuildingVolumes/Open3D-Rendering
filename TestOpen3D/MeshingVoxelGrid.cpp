@@ -100,7 +100,7 @@ void MeshingVoxelGrid::AddImage(open3d::geometry::Image& color, open3d::geometry
 				auto color_g = *color.PointerAt<uint8_t>(int_x, int_y, 1);
 				auto color_b = *color.PointerAt<uint8_t>(int_x, int_y, 2);
 
-				voxel->color = Eigen::Vector3d((double)color_r / 255.0, (double)color_g / 255.0, (double)color_b / 255.0);
+				//voxel->color = Eigen::Vector3d((double)color_r / 255.0, (double)color_g / 255.0, (double)color_b / 255.0);
 
 				Eigen::Vector3d pixel_position = rotation_inv * (intrinsic_inv * Eigen::Vector3d(uvz.x(), uvz.y(), pixel_depth) - position);
 

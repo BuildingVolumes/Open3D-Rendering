@@ -66,7 +66,7 @@ bool TextureUnpacker::PackUV(geometry::Image& im, geometry::TriangleMesh& mesh, 
 /// <summary>
 /// Packs UVs into a confined space and produces an output texture map
 /// </summary>
-/// <param name="im">Reference image consisting of all reference textures combined</param>
+/// <param name="color_array">Array of reference images consisting of all relevant color textures</param>
 /// <param name="mesh">Mesh with UVs to unpack</param>
 /// <param name="outputImage">Output texture. Resize this to the desired height/width/channels/etc before sending it to this function.</param>
 /// <param name="debug_info">Whether or not to debug additional information - highly inefficient, only use to debug</param>
