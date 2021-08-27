@@ -30,9 +30,9 @@ namespace MKV_Rendering {
 
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
-		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGrid();
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGrid(int maximum_artifact_size);
 
-		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGridAtTimestamp(uint64_t timestamp);
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGridAtTimestamp(int maximum_artifact_size, uint64_t timestamp);
 
 		open3d::geometry::VoxelGrid GetOldVoxelGrid(VoxelGridData* data);
 

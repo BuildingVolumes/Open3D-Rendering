@@ -212,8 +212,7 @@ MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string
 	ErrorLogger::EXECUTE("Create Intrinsic Tensor", this, &Livescan_Data::GetIntrinsicTensor);
 	ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &Livescan_Data::GetExtrinsicTensor);
 
-
-	auto im = open3d::t::io::CreateImageFromFile(color_files[current_frame]);
+	auto im = open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second);
 
 	int imageWidth = im->GetCols();
 	int imageHeight = im->GetRows();

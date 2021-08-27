@@ -426,7 +426,8 @@ namespace MKV_Rendering {
         //cm.LoadTypeLivescan(livescan_root_folder, 5);
         //cm.LoadTypeLivescan(livescan_single_image_test, 5);
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "july8-afternoon_0/MATTES", 5);
-        cm.LoadTypeLivescan("_TEST_DATA/july15-spinninghogue_0", "_TEST_DATA/july15-spinninghogue_0", 5);
+        //cm.LoadTypeLivescan("_TEST_DATA/july15-spinninghogue_0", "_TEST_DATA/july15-spinninghogue_0", 5);
+        cm.LoadTypeLivescan("_TEST_DATA/jakob_test", "_TEST_DATA/jakob_test", 5);
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "", 5);
 
         
@@ -456,14 +457,20 @@ namespace MKV_Rendering {
         //
         //return;
 
-        auto mesh = ErrorLogger::EXECUTE(
-            "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
-        );
-        
-        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+        //auto mesh = ErrorLogger::EXECUTE(
+        //    "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
+        //);
+        //
+        //auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+
+        open3d::geometry::TriangleMesh mesh;
+
+        io::ReadTriangleMesh("_TEST_DATA/jakob_test/frame_160.obj", mesh);
+
+        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh);
 
         //auto mesh_legacy = ErrorLogger::EXECUTE(
-        //    "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, timestamp
+        //    "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, 16, timestamp
         //);
 
         DrawObject(*mesh_legacy);
@@ -484,8 +491,8 @@ namespace MKV_Rendering {
 
         DrawObject(*mesh_legacy);
 
-        WriteOBJ("Hogue_07_16_2021.obj", "", &(*mesh_legacy));
-        open3d::io::WriteImageToPNG("Hogue_07_16_2021.png", *stitched_image);
+        WriteOBJ("Hogue_08_27_2021.obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_08_27_2021.png", *stitched_image);
         
 
         //DrawMesh(*mesh_legacy);

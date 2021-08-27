@@ -76,7 +76,7 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
     UvpOperationInputT uvpInput;
 
     uvpInput.m_pDeviceId = "cpu";
-    uvpInput.m_RenderResult = true;
+    //uvpInput.m_RenderResult = true;
     uvpInput.m_RenderInvalidIslands = true;
     uvpInput.m_RealtimeSolution = true;
     uvpInput.m_Benchmark = true;
@@ -185,6 +185,9 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
     double w = (double)outputImage->width_;
     double h = (double)outputImage->height_;
 
+    int intW = outputImage->width_;
+    int intH = outputImage->height_;
+
     double w2 = (double)color_array->at(0).width_;
     double h2 = (double)color_array->at(0).height_;
 
@@ -195,6 +198,9 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
 
     baryc.resize(3);
     baryc2.resize(3);
+
+    std::vector<float> image_weights;
+    image_weights.resize(intW * intH, 0);
 
     //Re-apply UVs
     const auto& islands = pIslandsMsg->m_Islands;
@@ -251,17 +257,68 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
                     Eigen::Vector2d pixel1 = baryc[0] * m0 + baryc[1] * m1 + baryc[2] * m2;
                     Eigen::Vector2d pixel2 = baryc2[0] * m0 + baryc2[1] * m1 + baryc2[2] * m2;
 
-                    int u1 = std::min(pixel1.x(), w - 1.0);
-                    int v1 = std::min(pixel1.y(), h - 1.0);
-                    int u2 = std::min(pixel2.x(), w2 - 1.0);
-                    int v2 = std::min(pixel2.y(), h2 - 1.0);
+                    double x1 = std::floor(pixel1.x());
+                    double x2 = x1 + 1;
+                    double y1 = std::floor(pixel1.y());
+                    double y2 = y1 + 1;
 
+                    double deltaX = x2 - pixel1.x();
+                    double deltaY = y2 - pixel1.y();
+
+                    int u0 = std::clamp(x1, 0.0, w - 1.0);
+                    int v0 = std::clamp(y1, 0.0, h - 1.0);
+                    int u1 = std::clamp(x2, 0.0, w - 1.0);
+                    int v1 = std::clamp(y2, 0.0, h - 1.0);
+
+                    int u2 = std::clamp(pixel2.x(), 0.0, w2 - 1.0);
+                    int v2 = std::clamp(pixel2.y(), 0.0, h2 - 1.0);
+
+                    v0 = h - v0 - 1;
                     v1 = h - v1 - 1;
                     v2 = h2 - v2 - 1;
 
-                    (*outputImage->PointerAt<uint8_t>(u1, v1, 0)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
-                    (*outputImage->PointerAt<uint8_t>(u1, v1, 1)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
-                    (*outputImage->PointerAt<uint8_t>(u1, v1, 2)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    (*outputImage->PointerAt<uint8_t>(u0, v0, 0)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    (*outputImage->PointerAt<uint8_t>(u0, v0, 1)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    (*outputImage->PointerAt<uint8_t>(u0, v0, 2)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+
+                    //One day the code below will work
+                    
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 0)) = image_weights[v0 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v0, 0)) + deltaX * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 1)) = image_weights[v0 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v0, 1)) + deltaX * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 2)) = image_weights[v0 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v0, 2)) + deltaX * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 0)) = image_weights[v1 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v1, 0)) + deltaX * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 1)) = image_weights[v1 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v1, 1)) + deltaX * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 2)) = image_weights[v1 * (int)w + u0] * (*outputImage->PointerAt<uint8_t>(u0, v1, 2)) + deltaX * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 0)) = image_weights[v0 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v0, 0)) + (1.0 - deltaX) * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 1)) = image_weights[v0 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v0, 1)) + (1.0 - deltaX) * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 2)) = image_weights[v0 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v0, 2)) + (1.0 - deltaX) * deltaY * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 0)) = image_weights[v1 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v1, 0)) + (1.0 - deltaX) * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 1)) = image_weights[v1 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v1, 1)) + (1.0 - deltaX) * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 2)) = image_weights[v1 * (int)w + u1] * (*outputImage->PointerAt<uint8_t>(u1, v1, 2)) + (1.0 - deltaX) * (1.0 - deltaY) * (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    //
+                    //image_weights[v0 * (int)w + u0] += deltaX * deltaY;
+                    //image_weights[v1 * (int)w + u0] += deltaX * (1.0 - deltaY);
+                    //image_weights[v0 * (int)w + u1] += (1.0 - deltaX) * deltaY;
+                    //image_weights[v1 * (int)w + u1] += (1.0 - deltaX) * (1.0 - deltaY);
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 0)) /= (image_weights[v0 * (int)w + u0] + (image_weights[v0 * (int)w + u0] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 1)) /= (image_weights[v0 * (int)w + u0] + (image_weights[v0 * (int)w + u0] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v0, 2)) /= (image_weights[v0 * (int)w + u0] + (image_weights[v0 * (int)w + u0] == 0));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 0)) /= (image_weights[v1 * (int)w + u0] + (image_weights[v1 * (int)w + u0] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 1)) /= (image_weights[v1 * (int)w + u0] + (image_weights[v1 * (int)w + u0] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u0, v1, 2)) /= (image_weights[v1 * (int)w + u0] + (image_weights[v1 * (int)w + u0] == 0));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 0)) /= (image_weights[v0 * (int)w + u1] + (image_weights[v0 * (int)w + u1] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 1)) /= (image_weights[v0 * (int)w + u1] + (image_weights[v0 * (int)w + u1] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v0, 2)) /= (image_weights[v0 * (int)w + u1] + (image_weights[v0 * (int)w + u1] == 0));
+                    //
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 0)) /= (image_weights[v1 * (int)w + u1] + (image_weights[v1 * (int)w + u1] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 1)) /= (image_weights[v1 * (int)w + u1] + (image_weights[v1 * (int)w + u1] == 0));
+                    //(*outputImage->PointerAt<uint8_t>(u1, v1, 2)) /= (image_weights[v1 * (int)w + u1] + (image_weights[v1 * (int)w + u1] == 0));
                 }
             }
         }

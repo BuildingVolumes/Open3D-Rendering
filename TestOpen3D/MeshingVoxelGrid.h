@@ -15,6 +15,13 @@ struct SingleVoxel
     Eigen::Vector3d color;
     Eigen::Vector3d position;
     byte voxel_type = MeshingVoxelType::NONE;
+    bool mark_for_cull = false;
+    bool lower_bound_x = false;
+    bool upper_bound_x = false;
+    bool lower_bound_y = false;
+    bool upper_bound_y = false;
+    bool lower_bound_z = false;
+    bool upper_bound_z = false;
 };
 
 struct MeshingVoxelEdge
@@ -48,6 +55,8 @@ public:
 
 	void AddImage(open3d::geometry::Image& color, open3d::geometry::Image& depth, Eigen::Matrix4d extrinsics, Eigen::Matrix3d intrinsics);
 
+    void KillEmptySpace();
+
     std::shared_ptr<open3d::geometry::TriangleMesh> ExtractMesh();
 
 	int GetVoxelCount() { return size_x * size_y * size_z; }
@@ -58,6 +67,8 @@ public:
 	SingleVoxel operator[](std::size_t idx) { return grid[idx]; }
 
     MeshingVoxelEdge LerpCorner(SingleVoxel* voxel_array, int elem1, int elem2);
+
+    void CullArtifacts(int artifact_size);
 
     const int edge_table[256] = {
         0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,

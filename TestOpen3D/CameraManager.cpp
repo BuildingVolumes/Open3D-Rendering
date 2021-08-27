@@ -271,7 +271,7 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGri
 	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGrid, data).ExtractSurfaceMesh(0.0f);
 }
 
-std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGrid()
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGrid(int maximum_artifact_size)
 {
 	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>(0.005, 201, 401, 201, Eigen::Vector3d(0, 0, 0));
 
@@ -280,17 +280,19 @@ std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::Ge
 		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
 	}
 
+	mvg->CullArtifacts(maximum_artifact_size);
+
 	return mvg->ExtractMesh();
 }
 
-std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGridAtTimestamp(uint64_t timestamp)
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGridAtTimestamp(int maximum_artifact_size, uint64_t timestamp)
 {
 	for (auto cam : camera_data)
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 	}
 
-	return GetMeshUsingNewVoxelGrid();
+	return GetMeshUsingNewVoxelGrid(maximum_artifact_size);
 }
 
 open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelGridData *data)
@@ -397,7 +399,9 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		int best_camera = -1;
 
 		//Currently each index should point to itself, we will force it to point elsewhere if need be
-		index_redirect.push_back(i);
+		index_redirect.push_back(3 * i);
+		index_redirect.push_back(3 * i + 1);
+		index_redirect.push_back(3 * i + 2);
 
 		//mesh->vertex_colors_[mesh->triangles_[i](0)] = Eigen::Vector3d(1, 0, 0);
 		//mesh->vertex_colors_[mesh->triangles_[i](1)] = Eigen::Vector3d(1, 0, 0);
@@ -438,7 +442,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 					break;
 				}
 
-				depth_delta += std::min(abs(depth - uvz.z()), (-normal_dot * 0.5f + 0.5));
+				depth_delta += abs(depth - uvz.z());// std::min(abs(depth - uvz.z()), (-normal_dot * 0.5f + 0.5));
 			}
 
 			if (bad_camera)
@@ -559,7 +563,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		better_texture->num_of_channels_ = color_images[0].num_of_channels_;
 		better_texture->data_.resize(better_texture->width_ * better_texture->height_ * better_texture->num_of_channels_ * better_texture->bytes_per_channel_);
 
-		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &color_images, mesh, &(*better_texture), true);
+		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &color_images, mesh, &(*better_texture), false);
 
 		return better_texture;
 	}
