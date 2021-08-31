@@ -83,6 +83,24 @@ namespace MKV_Rendering {
         writer.close();
     }
 
+    void ReadOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh)
+    {
+        std::ifstream reader;
+
+        if (filepath != "")
+        {
+            reader.open(filepath + "/" + filename);
+        }
+        else
+        {
+            reader.open(filename);
+        }
+
+        //TODO: finish
+
+        reader.close();
+    }
+
     template<class T>
     void DrawObject(T& object_to_draw)
     {
@@ -465,9 +483,11 @@ namespace MKV_Rendering {
 
         open3d::geometry::TriangleMesh mesh;
 
-        io::ReadTriangleMesh("_TEST_DATA/jakob_test/frame_160.obj", mesh);
+        io::ReadTriangleMesh("_TEST_DATA/hogue_160/frame_160.obj", mesh);
 
         auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh);
+
+        std::cout << mesh_legacy->vertices_.size() << ", " << (mesh_legacy->triangles_.size() * 3) << std::endl;
 
         //auto mesh_legacy = ErrorLogger::EXECUTE(
         //    "Generate Mesh", &cm, &CameraManager::GetMeshUsingNewVoxelGridAtTimestamp, 16, timestamp

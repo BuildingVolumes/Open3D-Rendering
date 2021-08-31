@@ -391,17 +391,18 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	//Number of triangles without UVs
 	int withoutUV = 0;
 
+	for (int i = 0; i < mesh->vertices_.size(); ++i)
+	{		
+		//Currently each index should point to itself, we will force it to point elsewhere if need be
+		index_redirect.push_back(i);
+	}
+
 	//Iterate through all the triangles and find the normal that aligns closest to a camera
 	for (int i = 0; i < mesh->triangles_.size(); ++i)
 	{
 		double highest_dot = -2.0;
 		double lowest_depth_delta = DBL_MAX;
 		int best_camera = -1;
-
-		//Currently each index should point to itself, we will force it to point elsewhere if need be
-		index_redirect.push_back(3 * i);
-		index_redirect.push_back(3 * i + 1);
-		index_redirect.push_back(3 * i + 2);
 
 		//mesh->vertex_colors_[mesh->triangles_[i](0)] = Eigen::Vector3d(1, 0, 0);
 		//mesh->vertex_colors_[mesh->triangles_[i](1)] = Eigen::Vector3d(1, 0, 0);
@@ -470,8 +471,11 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		else
 		{
 			//Record which camera 'owns' this triangle
-			camera_triangles[best_camera].push_back(i);
-			mesh->triangle_material_ids_[i] = best_camera;
+			//int best_camera = i;
+			int best_camera = 1;
+
+			camera_triangles[best_camera].push_back(best_camera);
+			mesh->triangle_material_ids_[best_camera] = best_camera;
 		}
 	}
 
