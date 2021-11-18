@@ -4,6 +4,7 @@
 #include "ErrorLogger.h"
 #include "VoxelGridData.h"
 #include "AdditionalUtilities.h"
+#include "NodeWrapper.h"
 
 #include "open3d/io/sensor/azure_kinect/K4aPlugin.h"
 #include "open3d/Open3D.h"
@@ -25,7 +26,7 @@
 #include <chrono>
 #include <uvpCore.hpp>
 
-#define PIPELINE_MODE 0
+#define PIPELINE_MODE 2
 
 using namespace open3d;
 using namespace open3d::core;
@@ -34,6 +35,13 @@ using namespace Eigen;
 using namespace uvpcore;
 
 namespace MKV_Rendering {
+
+    /// <summary>
+    /// Our own OBJ saving function, as Open3D's does not work in our case
+    /// </summary>
+    /// <param name="filename">: the name of our obj file</param>
+    /// <param name="filepath">: where to save our obj file</param>
+    /// <param name="mesh">: the mesh to save</param>
     void WriteOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh)
     {
         std::ofstream writer;
@@ -101,6 +109,11 @@ namespace MKV_Rendering {
         reader.close();
     }
 
+    /// <summary>
+    /// All-purpose object drawing function for debugging
+    /// </summary>
+    /// <typeparam name="T">: the type of object to draw</typeparam>
+    /// <param name="object_to_draw">: the object to draw</param>
     template<class T>
     void DrawObject(T& object_to_draw)
     {
@@ -114,6 +127,10 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+    /// <summary>
+    /// Specifically for drawing meshes
+    /// </summary>
+    /// <param name="object_to_draw">: mesh to draw</param>
     void DrawMesh(geometry::TriangleMesh &object_to_draw)
     {
         std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
@@ -125,6 +142,10 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+    /// <summary>
+    /// Speciically for drawing images
+    /// </summary>
+    /// <param name="object_to_draw">image to draw</param>
     void DrawImage(geometry::Image& object_to_draw)
     {
         std::vector<std::shared_ptr<const geometry::Geometry>> to_draw;
@@ -137,6 +158,12 @@ namespace MKV_Rendering {
         visualization::DrawGeometries(to_draw);
     }
 
+    /// <summary>
+    /// Draws a voxel grid via raycasting
+    /// </summary>
+    /// <param name="vg">: voxel grid to draw</param>
+    /// <param name="cm">: the camera manager</param>
+    /// <param name="vgd">: additional voxel grid data that may need to be known</param>
     void RaycastVoxelGrid(t::geometry::TSDFVoxelGrid& vg, CameraManager &cm, VoxelGridData &vgd)
     {
         Eigen::Projective3d transformation = Eigen::Projective3d::Identity();
@@ -217,6 +244,7 @@ namespace MKV_Rendering {
 
         return result;
     }
+
     void saveMesh(geometry::TriangleMesh& object_to_draw, AlembicWriter& alembicWriter) {
         AlembicMeshData meshData;
 
@@ -305,7 +333,7 @@ namespace MKV_Rendering {
 
         for (auto dir : directories)
         {
-            MKV_Data data(dir, "", "");
+            MKV_Data data(dir, "", "", iter);
 
             std::string new_dir = image_folder_path + "/FramesCam" + GetNumberFixedLength(iter, 8);
 
@@ -612,6 +640,17 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
+#elif PIPELINE_MODE == 2
+int main(int argc, char** argv)
+{
+    NodeWrapper nodeWrapper;
+
+    nodeWrapper.PerformOperations(argc, argv);
+
+    return 0;
+}
+
 #else
 int main() {
 

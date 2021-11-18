@@ -335,7 +335,7 @@ std::shared_ptr<open3d::geometry::RGBDImage> MKV_Data::DecompressCapture()
     return rgbd_buffer;
 }
 
-MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string calibration_name) : Abstract_Data(my_folder)
+MKV_Data::MKV_Data(std::string my_folder, std::string mkv_name, std::string calibration_name, int index) : Abstract_Data(my_folder, index)
 {
     ErrorLogger::EXECUTE("Initialization", this, &MKV_Data::Initialize, my_folder, mkv_name, calibration_name);
 

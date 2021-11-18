@@ -192,7 +192,7 @@ open3d::geometry::Image MKV_Rendering::Image_Data::TransformDepth(open3d::geomet
     return new_depth;
 }
 
-MKV_Rendering::Image_Data::Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, std::string intrinsics, std::string extrinsics, std::string FPS) : Abstract_Data(root_folder)
+MKV_Rendering::Image_Data::Image_Data(std::string root_folder, std::string color_folder, std::string depth_folder, std::string intrinsics, std::string extrinsics, std::string FPS, int index) : Abstract_Data(root_folder, index)
 {
     this->color_folder = root_folder + "/" + color_folder;
     this->depth_folder = root_folder + "/" + depth_folder;

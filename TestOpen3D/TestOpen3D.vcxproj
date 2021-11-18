@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -182,6 +182,7 @@
     <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MKV_Data.cpp" />
+    <ClCompile Include="NodeWrapper.cpp" />
     <ClCompile Include="TextureUnpacker.cpp" />
     <ClCompile Include="MeshingVoxelGrid.cpp" />
   </ItemGroup>
@@ -195,6 +196,7 @@
     <ClInclude Include="Image_Data.h" />
     <ClInclude Include="Livescan_Data.h" />
     <ClInclude Include="MKV_Data.h" />
+    <ClInclude Include="NodeWrapper.h" />
     <ClInclude Include="TextureUnpacker.h" />
     <ClInclude Include="MeshingVoxelGrid.h" />
     <ClInclude Include="VoxelGridData.h" />

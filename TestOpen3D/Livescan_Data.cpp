@@ -189,10 +189,8 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 	return new_depth;
 }
 
-MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, int camera_ID, double FPS) : Abstract_Data(data_folder), FPS(FPS)
+MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, int index, double FPS) : Abstract_Data(data_folder, index), FPS(FPS)
 {
-	this->camera_ID = camera_ID;
-
 	matte_folder_name = matte_folder;
 
 	for (auto s : extrinsics)

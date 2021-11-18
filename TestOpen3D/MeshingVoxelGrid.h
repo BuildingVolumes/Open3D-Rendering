@@ -1,21 +1,45 @@
 #pragma once
 #include "open3d/Open3D.h"
 
+
+//The type of voxel created
 enum MeshingVoxelType
 {
+    //Voxel is undecided
     NONE,
+
+    //Voxel contains nothing
     AIR,
+
+    //Voxel contains something
     SOLID
 };
 
+/// <summary>
+/// One single voxel in our grid
+/// </summary>
 struct SingleVoxel
 {
+    //The solidity of the voxel
     double value = 0.0f;
+
+    //How certain we are of the voxel's value
     double weight = 0.0f;
+
+    //The color of the voxel
     Eigen::Vector3d color;
+
+    //Voxel's location in local space
     Eigen::Vector3d position;
+
+    //What type of voxel this is, defaults undecided
     byte voxel_type = MeshingVoxelType::NONE;
+
+    //If a voxel exists beyond the boundaries of any camera, it is culled from existence
     bool mark_for_cull = false;
+
+    //Variables below dictate boundaries - could be compacted into a single byte in the future
+
     bool lower_bound_x = false;
     bool upper_bound_x = false;
     bool lower_bound_y = false;
@@ -24,6 +48,9 @@ struct SingleVoxel
     bool upper_bound_z = false;
 };
 
+/// <summary>
+/// One single interpolated value of the voxel grid - exists only before the grid is turned into a mesh
+/// </summary>
 struct MeshingVoxelEdge
 {
     MeshingVoxelEdge() {
@@ -39,37 +66,98 @@ struct MeshingVoxelEdge
     Eigen::Vector3d color;
 };
 
+/// <summary>
+/// Our own voxel grid, due to lack of faith in Open3D's grid
+/// </summary>
 class MeshingVoxelGrid
 {
+	//How big a single voxel is
 	double voxel_size;
 	
+    //Size of a rectangular prism housing the voxels
 	int size_x;
 	int size_y;
 	int size_z;
 
+    //Array of voxels
 	SingleVoxel* grid;
 
 public:
+	/// <summary>
+	/// Grid constructor - say hi! :D
+	/// </summary>
+	/// <param name="voxel_size">: how big a single voxel is</param>
+	/// <param name="voxels_x">: how many voxels on x axis</param>
+	/// <param name="voxels_y">: how many voxels on y axis</param>
+	/// <param name="voxels_z">: how many voxels on z axis</param>
+	/// <param name="center">: allows you to offset the default position of the grid, in case cameras are not centered</param>
 	MeshingVoxelGrid(double voxel_size, int voxels_x, int voxels_y, int voxels_z, Eigen::Vector3d center);
+
+    //Default destructor - Say goodbye! :(
 	~MeshingVoxelGrid();
 
+	/// <summary>
+	/// Adds a single RGBD camera image into the voxel grid
+	/// </summary>
+	/// <param name="color">: the color image</param>
+	/// <param name="depth">: the depth image</param>
+	/// <param name="extrinsics">: extrinsics of the camera</param>
+	/// <param name="intrinsics">: intrinsics of the camera</param>
 	void AddImage(open3d::geometry::Image& color, open3d::geometry::Image& depth, Eigen::Matrix4d extrinsics, Eigen::Matrix3d intrinsics);
 
+    /// <summary>
+    /// Culls all voxels that don't belong to a camera - converts them from undecided to air
+    /// </summary>
     void KillEmptySpace();
 
+    /// <summary>
+    /// Returns the mesh from the voxel grid
+    /// </summary>
     std::shared_ptr<open3d::geometry::TriangleMesh> ExtractMesh();
 
+	/// <summary>
+	/// Returns the total voxels in the grid
+	/// </summary>
 	int GetVoxelCount() { return size_x * size_y * size_z; }
+
+	/// <summary>
+	/// Returns the X dimension of the voxels
+	/// </summary>
 	int GetSizeX() { return size_x;	}
+
+    /// <summary>
+    /// Returns the Y dimension of the voxels
+    /// </summary>
 	int GetSizeY() { return size_y;	}
+
+    /// <summary>
+    /// Returns the Z dimension of the voxels
+    /// </summary>
 	int GetSizeZ() { return size_z;	}
 
+	/// <summary>
+	/// Operator overloard for getting a voxel from the grid
+	/// </summary>
 	SingleVoxel operator[](std::size_t idx) { return grid[idx]; }
 
+    /// <summary>
+    /// Interpolates between 2 elements of the voxel array, according to the voxel's values
+    /// </summary>
+    /// <param name="voxel_array">: the array of voxels to lerp - will be removed in the future</param>
+    /// <param name="elem1">: the index of the first element</param>
+    /// <param name="elem2">: the index of the second element</param>
+    /// <returns>: the interpolated color and position</returns>
     MeshingVoxelEdge LerpCorner(SingleVoxel* voxel_array, int elem1, int elem2);
 
+    /// <summary>
+    /// Performs a pseudo-smoothing operation, and attempts to destroy unwanted noise
+    /// </summary>
+    /// <param name="artifact_size">How big of an artifact to look for - too big values may distort grid</param>
     void CullArtifacts(int artifact_size);
 
+    /// <summary>
+    /// Voxel grid black magic
+    /// </summary>
     const int edge_table[256] = {
         0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
         0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
@@ -104,6 +192,9 @@ public:
         0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
         0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
 
+    /// <summary>
+    /// More voxel grid black magic
+    /// </summary>
     const int tri_table[256][16] = {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
         {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},

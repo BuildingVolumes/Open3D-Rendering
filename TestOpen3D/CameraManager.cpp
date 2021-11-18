@@ -73,6 +73,8 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 	
 	std::map<std::string, std::string> camera_structure;
 
+	int index = 0;
+
 	for (auto _folder : all_folders)
 	{
 		std::string structure_path = _folder + "/" + structure_file_name;
@@ -92,8 +94,11 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 			camera_data.push_back(new MKV_Data(
 				_folder,
 				camera_structure["MKV_File"],
-				camera_structure["Calibration_File"]
+				camera_structure["Calibration_File"],
+				index
 			));
+
+			camera_enabled.push_back(true);
 		}
 		else if (c_type == "image")
 		{
@@ -103,8 +108,11 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 				camera_structure["Depth"],
 				camera_structure["Intrinsics_Json"],
 				camera_structure["Calibration_File"],
-				camera_structure["FPS"]
+				camera_structure["FPS"],
+				index
 			));
+
+			camera_enabled.push_back(true);
 		}
 		else
 		{
@@ -114,6 +122,8 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 		camera_structure.clear();
 
 		std::cout << "Finished initializing camera!\n" << std::endl;
+
+		++index;
 	}
 
 	if (camera_data.size() == 0)
@@ -219,6 +229,8 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string image_root_folde
 			extrinsics_string,
 			i, FPS
 		));
+
+		camera_enabled.push_back(true);
 	}
 
 	if (camera_data.size() == 0)
@@ -261,6 +273,8 @@ bool MKV_Rendering::CameraManager::Unload()
 		camera_data.pop_back();
 	}
 
+	camera_enabled.clear();
+
 	loaded = false;
 
 	return true;
@@ -277,7 +291,12 @@ std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::Ge
 
 	for (auto cam : camera_data)
 	{
-		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
+		}
 	}
 
 	mvg->CullArtifacts(maximum_artifact_size);
@@ -303,7 +322,12 @@ open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelG
 
 	for (auto cam : camera_data)
 	{
-		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoOldVoxelGrid, &grid);
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoOldVoxelGrid, &grid);
+		}
 	}
 
 	return grid;
@@ -327,7 +351,12 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGrid(Vo
 
 	for (auto cam : camera_data)
 	{
-		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
+		}
 	}
 
 	return voxel_grid;
@@ -340,23 +369,31 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		ErrorLogger::LOG_ERROR("No cameras present!", true);
 	}
+
+
+	int camera_count = camera_data.size();
+	int vert_count = mesh->vertices_.size();
 	
 	std::vector<open3d::geometry::Image> color_images;
 	std::vector<open3d::geometry::Image> depth_images;
 
+	color_images.resize(camera_count);
+	depth_images.resize(camera_count);
+
 	//Write all camera images at the current time to one vector
 	for (auto cam : camera_data)
 	{
-		auto rgbd_im = ErrorLogger::EXECUTE("Get RGBD Image for Texture Stitching", cam, &Abstract_Data::GetFrameRGBD);
+		int index = cam->GetIndex();
 
-		color_images.push_back(rgbd_im->color_);
-		depth_images.push_back(*(rgbd_im->depth_.ConvertDepthToFloatImage()));
+		if (index > 0 && camera_enabled[index])
+		{
+			auto rgbd_im = ErrorLogger::EXECUTE("Get RGBD Image for Texture Stitching", cam, &Abstract_Data::GetFrameRGBD);
+
+			color_images[index] = rgbd_im->color_;
+			depth_images[index] = *(rgbd_im->depth_.ConvertDepthToFloatImage());
+		}
 	}
 
-
-
-	int camera_count = camera_data.size();	
-	int vert_count = mesh->vertices_.size();
 
 	//Save data about the cameras for future use, and allocate triangle vectors
 
@@ -367,20 +404,32 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	std::vector<Eigen::Matrix3d> camera_rotations;
 	std::vector<Eigen::Matrix3d> camera_intrinsics;
 
+	camera_triangles.resize(camera_count);
+	camera_positions_original.resize(camera_count);
+	camera_positions_rotated.resize(camera_count);
+	camera_positions_normalized.resize(camera_count);
+	camera_rotations.resize(camera_count);
+	camera_intrinsics.resize(camera_count);
+
 	mesh->textures_.clear();
 
 	for (int i = 0; i < camera_count; ++i)
 	{
-		auto mat = camera_data[i]->GetExtrinsicMat();
+		int index = camera_data[i]->GetIndex();
 
-		mesh->textures_.push_back(color_images[i]);
+		if (index > 0 && camera_enabled[index])
+		{
+			auto mat = camera_data[i]->GetExtrinsicMat();
 
-		camera_triangles.push_back(std::vector<int>());
-		camera_positions_original.push_back(mat.block<3, 1>(0, 3));
-		camera_rotations.push_back(mat.block<3, 3>(0, 0));
-		camera_positions_rotated.push_back(mat.block<3, 3>(0, 0) * mat.block<3, 1>(0, 3));
-		camera_positions_normalized.push_back(camera_positions_rotated[i].normalized());
-		camera_intrinsics.push_back(camera_data[i]->GetIntrinsicMat());
+			mesh->textures_.push_back(color_images[i]);
+
+			camera_triangles[i] = std::vector<int>();
+			camera_positions_original[i] = mat.block<3, 1>(0, 3);
+			camera_rotations[i] = mat.block<3, 3>(0, 0);
+			camera_positions_rotated[i] = mat.block<3, 3>(0, 0) * mat.block<3, 1>(0, 3);
+			camera_positions_normalized[i] = camera_positions_rotated[i].normalized();
+			camera_intrinsics[i] = camera_data[i]->GetIntrinsicMat();
+		}
 	}
 
 	//Used to allow an easy way to modify triangle indices
@@ -410,57 +459,62 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 
 		for (int j = 0; j < camera_count; ++j)
 		{
-			//Take the depth that is most facing the image
-			auto normal = (mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](1)]).cross(
-				mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](2)]
-			).normalized();
+			int index = camera_data[j]->GetIndex();
 
-			auto normal_dot = normal.dot(-camera_positions_normalized[j]);
-
-			double depth_delta = 0;
-
-			bool bad_camera = false;
-			for (int k = 0; k < 3; ++k)
+			if (index > 0 && camera_enabled[index])
 			{
-				//Check that the UVs would actually be on the image
-				Eigen::Vector3d uvz = camera_intrinsics[j] *
-					(camera_rotations[j] * mesh->vertices_[mesh->triangles_[i](k)] + camera_positions_original[j]);
+				//Take the depth that is most facing the image
+				auto normal = (mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](1)]).cross(
+					mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](2)]
+				).normalized();
 
-				uvz.x() /= (uvz.z());
+				auto normal_dot = normal.dot(-camera_positions_normalized[j]);
 
-				uvz.y() /= (uvz.z());
+				double depth_delta = 0;
 
-				double depth = 0;
-				bool in_bounds;
-				std::tie(in_bounds, depth) = depth_images[j].FloatValueAt(uvz.x(), uvz.y());
-
-				//float delta_depth = uvz.z() - depth;
-
-				//Cull if the depth is OOB
-				if (!in_bounds)// || (delta_depth * delta_depth > depth_epsilon * depth_epsilon))
+				bool bad_camera = false;
+				for (int k = 0; k < 3; ++k)
 				{
-					bad_camera = true;
-					break;
+					//Check that the UVs would actually be on the image
+					Eigen::Vector3d uvz = camera_intrinsics[j] *
+						(camera_rotations[j] * mesh->vertices_[mesh->triangles_[i](k)] + camera_positions_original[j]);
+
+					uvz.x() /= (uvz.z());
+
+					uvz.y() /= (uvz.z());
+
+					double depth = 0;
+					bool in_bounds;
+					std::tie(in_bounds, depth) = depth_images[j].FloatValueAt(uvz.x(), uvz.y());
+
+					//float delta_depth = uvz.z() - depth;
+
+					//Cull if the depth is OOB
+					if (!in_bounds)// || (delta_depth * delta_depth > depth_epsilon * depth_epsilon))
+					{
+						bad_camera = true;
+						break;
+					}
+
+					depth_delta += abs(depth - uvz.z());// std::min(abs(depth - uvz.z()), (-normal_dot * 0.5f + 0.5));
 				}
 
-				depth_delta += abs(depth - uvz.z());// std::min(abs(depth - uvz.z()), (-normal_dot * 0.5f + 0.5));
-			}
+				if (bad_camera)
+				{
+					continue;
+				}
 
-			if (bad_camera)
-			{
-				continue;
-			}
+				//if (normal_dot > highest_dot)
+				//{
+				//	highest_dot = normal_dot;
+				//	best_camera = j;
+				//}
 
-			//if (normal_dot > highest_dot)
-			//{
-			//	highest_dot = normal_dot;
-			//	best_camera = j;
-			//}
-
-			if (lowest_depth_delta > depth_delta)
-			{
-				lowest_depth_delta = depth_delta;
-				best_camera = j;
+				if (lowest_depth_delta > depth_delta)
+				{
+					lowest_depth_delta = depth_delta;
+					best_camera = j;
+				}
 			}
 		}
 
@@ -500,58 +554,63 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	//Create new vertices such that we can split relevant UVs by camera
 	for (int i = 0; i < camera_count; ++i)
 	{
-		for (auto triangle_index : camera_triangles[i])
+		int index = camera_data[i]->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
 		{
-			auto triangle = mesh->triangles_[triangle_index];
-			for (int j = 0; j < 3; ++j)
+			for (auto triangle_index : camera_triangles[i])
 			{
-				int vert_loc = index_redirect[triangle(j)];
-
-				if (index_claims[vert_loc] < 0 || index_claims[vert_loc] == i)
+				auto triangle = mesh->triangles_[triangle_index];
+				for (int j = 0; j < 3; ++j)
 				{
-					//No other camera has claimed this index, we set appropriate data
-					index_claims[vert_loc] = i;
+					int vert_loc = index_redirect[triangle(j)];
 
+					if (index_claims[vert_loc] < 0 || index_claims[vert_loc] == i)
+					{
+						//No other camera has claimed this index, we set appropriate data
+						index_claims[vert_loc] = i;
+
+					}
+					else
+					{
+						//If the index is already claimed by a different camera, then duplicate it and redirect the triangles
+						index_redirect[triangle(j)] = vert_count;
+						vert_loc = index_redirect[triangle(j)];
+						++vert_count;
+
+						index_claims.push_back(i);
+						mesh->vertices_.push_back(mesh->vertices_[triangle(j)]);
+						mesh->vertex_normals_.push_back(mesh->vertex_normals_[triangle(j)]);
+						mesh->vertex_colors_.push_back(mesh->vertex_colors_[triangle(j)]);
+						mesh->triangle_uvs_.push_back(mesh->triangle_uvs_[triangle(j)]);
+					}
+
+					//Ensure that we are pointing to the correct triangle index, if we had to change it previously
+					mesh->triangles_[triangle_index](j) = vert_loc;
+
+					//Eliminate the vertex colors
+					//mesh->vertex_colors_[vert_loc] = Eigen::Vector3d(0.5,1,0.5);
+
+					//Set UVs
+					Eigen::Vector3d uvz = camera_intrinsics[i] *
+						(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
+
+					uvz.x() /= (uvz.z() * (double)color_images[i].width_);
+					uvz.y() /= (uvz.z() * (double)color_images[i].height_);
+
+					if (useTheBadTexturingMethod)
+					{
+						uvz.y() += (double)i;
+						uvz.y() /= (double)camera_count;
+					}
+
+					uvz.y() = 1.0 - uvz.y();
+
+					//uvz.x() /= uvz.z();
+					//uvz.y() /= uvz.z();
+
+					mesh->triangle_uvs_[vert_loc] = Eigen::Vector2d(uvz.x(), uvz.y());
 				}
-				else
-				{
-					//If the index is already claimed by a different camera, then duplicate it and redirect the triangles
-					index_redirect[triangle(j)] = vert_count;
-					vert_loc = index_redirect[triangle(j)];
-					++vert_count;
-
-					index_claims.push_back(i);
-					mesh->vertices_.push_back(mesh->vertices_[triangle(j)]);
-					mesh->vertex_normals_.push_back(mesh->vertex_normals_[triangle(j)]);
-					mesh->vertex_colors_.push_back(mesh->vertex_colors_[triangle(j)]);
-					mesh->triangle_uvs_.push_back(mesh->triangle_uvs_[triangle(j)]);
-				}
-
-				//Ensure that we are pointing to the correct triangle index, if we had to change it previously
-				mesh->triangles_[triangle_index](j) = vert_loc;
-
-				//Eliminate the vertex colors
-				//mesh->vertex_colors_[vert_loc] = Eigen::Vector3d(0.5,1,0.5);
-
-				//Set UVs
-				Eigen::Vector3d uvz = camera_intrinsics[i] *
-					(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
-
-				uvz.x() /= (uvz.z() * (double)color_images[i].width_);
-				uvz.y() /= (uvz.z() * (double)color_images[i].height_);
-
-				if (useTheBadTexturingMethod)
-				{
-					uvz.y() += (double)i;
-					uvz.y() /= (double)camera_count;
-				}
-
-				uvz.y() = 1.0 - uvz.y();
-
-				//uvz.x() /= uvz.z();
-				//uvz.y() /= uvz.z();
-
-				mesh->triangle_uvs_[vert_loc] = Eigen::Vector2d(uvz.x(), uvz.y());
 			}
 		}
 	}
@@ -661,7 +720,12 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGridAtT
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 
-		ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
+		}
 	}
 
 	return voxel_grid;
@@ -675,7 +739,12 @@ std::vector<open3d::geometry::RGBDImage> MKV_Rendering::CameraManager::ExtractIm
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 
-		to_return.push_back(*ErrorLogger::EXECUTE("Extract RGBD Image Vector", cam, &Abstract_Data::GetFrameRGBD));
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			to_return.push_back(*ErrorLogger::EXECUTE("Extract RGBD Image Vector", cam, &Abstract_Data::GetFrameRGBD));
+		}
 	}
 
 	return to_return;
@@ -755,6 +824,17 @@ void MKV_Rendering::CameraManager::CreateSSMVFolder(
 
 	image_data_file.close();
 	camera_data_file.close();
+}
+
+void MKV_Rendering::CameraManager::SetCameraEnabled(int index, bool enabled)
+{
+	if (index < 0 || index >= camera_enabled.size())
+	{
+		std::cout << "index " << index << " out of range!" << std::endl;
+		return;
+	}
+
+	camera_enabled[index] = enabled;
 }
 
 uint64_t MKV_Rendering::CameraManager::GetHighestTimestamp()
