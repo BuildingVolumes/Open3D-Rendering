@@ -15,6 +15,8 @@ class NodeWrapper
 
 	int specsLength = 0;
 
+	std::vector<std::string> pseudoSpecs;
+
 	void WriteOBJ(std::string filename, std::string filepath, open3d::geometry::TriangleMesh* mesh);
 
 public:
@@ -26,17 +28,23 @@ public:
 	void PerformOperations(int maxSpecs, char** specs);
 
 protected:
-	int MakeOBJ(char** specs, int startingLoc);
+	int MakeEmptyTXT(int currentSpec);
 
-	int TextureOBJ(char** specs, int startingLoc);
+	void DebugLine(std::string text);
 
-	int LoadDataLivescan(char** specs, int startingLoc, bool useMattes);
+	int MakeOBJ(int startingLoc);
 
-	int LoadDataStructure(char** specs, int startingLoc);
+	int TextureOBJ(int startingLoc);
 
-	int Unload(char** specs, int startingLoc);
+	int LoadDataLivescan(int startingLoc, bool useMattes);
 
-	int SetVoxelGridData(char** specs, int startingLoc);
+	int LoadDataStructure(int startingLoc);
 
-	int EnableCamera(char** specs, int startingLoc, bool enable);
+	int Unload(int startingLoc);
+
+	int SetVoxelGridData(int startingLoc);
+
+	int EnableCamera(int startingLoc, bool enable);
+
+	int CleanupMeshPoisson(int startingLoc);
 };

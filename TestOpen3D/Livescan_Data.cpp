@@ -18,7 +18,7 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 	for (auto s : all_files)
 	{
 		std::vector<std::string> split_extension;
-		SplitString(s, split_extension, '.');
+		SplitString(s, split_extension, '.', "\\/");
 
 		if ((split_extension.front().find("Color_") != std::string::npos) && (split_extension.back() == "jpg"))
 		{
@@ -55,7 +55,7 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 		for (auto s : all_mattes)
 		{
 			std::vector<std::string> split_extension;
-			SplitString(s, split_extension, '.');
+			SplitString(s, split_extension, '.', "\\/");
 
 			if (s.find("matte") != std::string::npos)
 			{
@@ -197,7 +197,7 @@ MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string
 	{
 		std::vector<std::string> split;
 
-		SplitString(s, split, '\t');
+		SplitString(s, split, ' ');
 
 		for (auto s_2 : split)
 		{

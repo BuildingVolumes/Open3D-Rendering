@@ -12,6 +12,7 @@
     <ClCompile Include="TextureUnpacker.cpp" />
     <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="MeshingVoxelGrid.cpp" />
+    <ClCompile Include="NodeWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="KinectRenderer.cpp">
@@ -56,5 +57,6 @@
     <ClInclude Include="VoxelGridData.h" />
     <ClInclude Include="MeshingVoxelGrid.h" />
     <ClInclude Include="NodeWrapper.h" />
+    <ClInclude Include="AbstractCommand.h" />
   </ItemGroup>
 </Project>

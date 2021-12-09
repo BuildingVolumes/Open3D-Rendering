@@ -187,6 +187,7 @@
     <ClCompile Include="MeshingVoxelGrid.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AbstractCommand.h" />
     <ClInclude Include="Abstract_Data.h" />
     <ClInclude Include="AdditionalUtilities.h" />
     <ClInclude Include="AlembicWriter.h" />
