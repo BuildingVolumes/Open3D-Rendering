@@ -1,6 +1,36 @@
 #pragma once
 #include "open3d/Open3D.h"
+#include <map>
+#include <string>
+#include <fstream>
+#include <fftw3.h>
 
+struct MeshingVoxelParams
+{
+    MeshingVoxelParams() {
+
+    }
+
+    /// <summary>
+    /// Constructor. Say hi! :D
+    /// </summary>
+    /// <param name="voxel_size">size of a voxel</param>
+    /// <param name="points_x">number of vertices in the X dimension of the grid (voxels + 1)</param>
+    /// <param name="points_y">number of vertices in the Y dimension of the grid (voxels + 1)</param>
+    /// <param name="points_z">number of vertices in the Z dimension of the grid (voxels + 1)</param>
+    /// <param name="center">center of the grid in local space</param>
+    MeshingVoxelParams(double voxel_size, int points_x, int points_y, int points_z, Eigen::Vector3d center) {
+        this->voxel_size = voxel_size;
+        this->points_x = points_x;
+        this->points_y = points_y;
+        this->points_z = points_z;
+        this->center = center;
+    }
+
+    double voxel_size;
+    int points_x, points_y, points_z;
+    Eigen::Vector3d center;
+};
 
 //The type of voxel created
 enum MeshingVoxelType
@@ -24,28 +54,28 @@ struct SingleVoxel
     double value = 0.0f;
 
     //How certain we are of the voxel's value
-    double weight = 0.0f;
+    //double weight = 0.0f;
 
     //The color of the voxel
-    Eigen::Vector3d color;
+    //Eigen::Vector3d color;
 
     //Voxel's location in local space
-    Eigen::Vector3d position;
+    //Eigen::Vector3d position;
 
     //What type of voxel this is, defaults undecided
     byte voxel_type = MeshingVoxelType::NONE;
 
     //If a voxel exists beyond the boundaries of any camera, it is culled from existence
-    bool mark_for_cull = false;
+    //bool mark_for_cull = false;
 
     //Variables below dictate boundaries - could be compacted into a single byte in the future
 
-    bool lower_bound_x = false;
-    bool upper_bound_x = false;
-    bool lower_bound_y = false;
-    bool upper_bound_y = false;
-    bool lower_bound_z = false;
-    bool upper_bound_z = false;
+    //bool lower_bound_x = false;
+    //bool upper_bound_x = false;
+    //bool lower_bound_y = false;
+    //bool upper_bound_y = false;
+    //bool lower_bound_z = false;
+    //bool upper_bound_z = false;
 };
 
 /// <summary>
@@ -57,13 +87,13 @@ struct MeshingVoxelEdge
 
     }
 
-    MeshingVoxelEdge(Eigen::Vector3d position, Eigen::Vector3d color) {
-        this->color = color;
+    MeshingVoxelEdge(Eigen::Vector3d position, int index) {
         this->position = position;
+        this->index = index;
     }
 
     Eigen::Vector3d position;
-    Eigen::Vector3d color;
+    int index;
 };
 
 /// <summary>
@@ -71,30 +101,32 @@ struct MeshingVoxelEdge
 /// </summary>
 class MeshingVoxelGrid
 {
-	//How big a single voxel is
-	double voxel_size;
-	
-    //Size of a rectangular prism housing the voxels
-	int size_x;
-	int size_y;
-	int size_z;
+    MeshingVoxelParams params;
 
     //Array of voxels
-	SingleVoxel* grid;
+	SingleVoxel* grid = nullptr;
+
+    Eigen::Vector3d first_corner;
+
+    //const byte zipMulti = 0;
+    //const byte zipSingular = 1;
+
+    int* frameLocations = nullptr;
+    int positionHeaderLocation = 0;
 
 public:
 	/// <summary>
-	/// Grid constructor - say hi! :D
+	/// Constructor. Say hi! :D
 	/// </summary>
-	/// <param name="voxel_size">: how big a single voxel is</param>
-	/// <param name="voxels_x">: how many voxels on x axis</param>
-	/// <param name="voxels_y">: how many voxels on y axis</param>
-	/// <param name="voxels_z">: how many voxels on z axis</param>
-	/// <param name="center">: allows you to offset the default position of the grid, in case cameras are not centered</param>
-	MeshingVoxelGrid(double voxel_size, int voxels_x, int voxels_y, int voxels_z, Eigen::Vector3d center);
+	/// <param name="params">All the parameters necessary to construct a grid</param>
+	MeshingVoxelGrid(MeshingVoxelParams &params);
+
+    MeshingVoxelGrid();
 
     //Default destructor - Say goodbye! :(
 	~MeshingVoxelGrid();
+
+    void SetData(MeshingVoxelParams& params);
 
 	/// <summary>
 	/// Adds a single RGBD camera image into the voxel grid
@@ -115,25 +147,30 @@ public:
     /// </summary>
     std::shared_ptr<open3d::geometry::TriangleMesh> ExtractMesh();
 
+    int GetArrayLoc(int x, int y, int z)
+    {
+        return (x * params.points_y + y)* params.points_z + z;
+    }
+
 	/// <summary>
 	/// Returns the total voxels in the grid
 	/// </summary>
-	int GetVoxelCount() { return size_x * size_y * size_z; }
+	int GetVoxelCount() { return (params.points_x - 1) * (params.points_y - 1) * (params.points_z - 1); }
 
 	/// <summary>
 	/// Returns the X dimension of the voxels
 	/// </summary>
-	int GetSizeX() { return size_x;	}
+	int GetSizeX() { return (params.points_x);	}
 
     /// <summary>
     /// Returns the Y dimension of the voxels
     /// </summary>
-	int GetSizeY() { return size_y;	}
+	int GetSizeY() { return (params.points_y);	}
 
     /// <summary>
     /// Returns the Z dimension of the voxels
     /// </summary>
-	int GetSizeZ() { return size_z;	}
+	int GetSizeZ() { return (params.points_z);	}
 
 	/// <summary>
 	/// Operator overloard for getting a voxel from the grid
@@ -143,17 +180,186 @@ public:
     /// <summary>
     /// Interpolates between 2 elements of the voxel array, according to the voxel's values
     /// </summary>
-    /// <param name="voxel_array">: the array of voxels to lerp - will be removed in the future</param>
+    /// <param name="voxel_array">: the array of voxels to lerp</param>
+    /// <param name="edge_map">: A map of all previously constructed edges, will be written to and returns a tuple indicating location</param>
+    /// <param name="verts">: Maps duplicate vertices</param>
     /// <param name="elem1">: the index of the first element</param>
     /// <param name="elem2">: the index of the second element</param>
-    /// <returns>: the interpolated color and position</returns>
-    MeshingVoxelEdge LerpCorner(SingleVoxel* voxel_array, int elem1, int elem2);
+    /// <returns>: the location of the interpolated edge in the map</returns>
+    std::tuple<int, int> LerpCorner(SingleVoxel* voxel_array, std::map<std::tuple<int, int>, MeshingVoxelEdge> &edge_map, 
+        std::vector<std::tuple<int, int>> &keys, int elem1, int elem2, Eigen::Vector3d& pos1, Eigen::Vector3d& pos2);
 
     /// <summary>
     /// Performs a pseudo-smoothing operation, and attempts to destroy unwanted noise
     /// </summary>
     /// <param name="artifact_size">How big of an artifact to look for - too big values may distort grid</param>
     void CullArtifacts(int artifact_size);
+
+    /// <summary>
+    /// Copy a array of data into the grid. This will not change the dimensions or other voxel grid data.
+    /// </summary>
+    /// <param name="double_stream">Array of double values</param>
+    void LoadGridAsDoubleArray(double* double_stream);
+
+    void SetGridValue(int loc, double value) { grid[loc].value = value; }
+
+    void SetGridType(int loc, MeshingVoxelType type){ grid[loc].voxel_type = type; }
+
+    double GetGridValue(int loc) { return grid[loc].value; }
+
+    MeshingVoxelType GetGridType(int loc) { return (MeshingVoxelType)grid[loc].voxel_type; }
+
+    bool SaveDenseGridToBinaryFile(std::string filename);
+
+    bool SaveGridFourierToBinaryFile(std::string filename, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+
+    bool SaveDenseGridToPlaintextFile(std::string filename);
+
+    void StrPlusDelim(std::string str, std::string delim, std::ofstream &savefile);
+
+    bool ReadDenseGridFromBinaryFile(std::string filename);
+
+    bool ReadGridFourierFromBinary(std::string filename);
+
+    bool ReadDenseGridFromPlaintextFile(std::string filename);
+
+    bool SaveGridFourierToBinaryFile(std::ofstream &savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+
+    bool SaveMVP(std::ofstream& savefile);
+    bool SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+
+    bool SaveGridZipBinaryWithoutMVP(std::ofstream& savefile);
+
+    void StandardFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+    void CompactFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+
+    bool ReadGridFourierFromBinary(std::ifstream &savefile);
+
+    void FlushGrid()
+    {
+        int gridsize = params.points_x * params.points_y * params.points_z;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            grid[i].value = 0;
+            grid[i].voxel_type = MeshingVoxelType::NONE;
+        }
+    }
+
+    void MakeDebuggingSphere(Eigen::Vector3d sphere_center, float radius)
+    {
+        //int gridsize = params.points_x * params.points_y * params.points_z;
+        int gridloc = 0;
+
+        for (int x = 0; x < params.points_x; ++x)
+        {
+            for (int y = 0; y < params.points_y; ++y)
+            {
+                for (int z = 0; z < params.points_z; ++z, ++gridloc)
+                {
+                    Eigen::Vector3d position = first_corner + params.voxel_size * Eigen::Vector3d(x, y, z);
+
+                    Eigen::Vector3d delta = (position - sphere_center);
+
+                    double sdf = (sqrt(delta.dot(delta)) - radius) / params.voxel_size;
+
+                    grid[gridloc].value = std::min(abs(sdf), 1.0);
+                    grid[gridloc].voxel_type = sdf > 0 ? MeshingVoxelType::AIR : MeshingVoxelType::SOLID;
+                }
+            }
+        }
+    }
+
+    double AbsoluteDifference(MeshingVoxelGrid& other)
+    {
+        if (params.points_x != other.params.points_x || params.points_y != other.params.points_y || params.points_z != other.params.points_z)
+        {
+            std::cout << "Incorrectly sized grids!" << std::endl;
+            return 0;
+        }
+
+        int gridsize = params.points_x * params.points_y * params.points_z;
+        double total = 0;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            double v1 = (grid[i].voxel_type == MeshingVoxelType::SOLID ? grid[i].value : -grid[i].value);
+            double v2 = (other.grid[i].voxel_type == MeshingVoxelType::SOLID ? other.grid[i].value : -other.grid[i].value);
+            total += abs(v1 - v2);
+        }
+
+        return total;
+    }
+
+    double Sum()
+    {
+        int gridsize = params.points_x * params.points_y * params.points_z;
+        double total = 0;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            double v1 = (grid[i].voxel_type == MeshingVoxelType::SOLID ? grid[i].value : -grid[i].value);
+            total += v1;
+        }
+
+        return total;
+    }
+
+    void Subtract(MeshingVoxelGrid& other)
+    {
+        if (params.points_x != other.params.points_x || params.points_y != other.params.points_y || params.points_z != other.params.points_z)
+        {
+            std::cout << "Incorrectly sized grids!" << std::endl;
+            return;
+        }
+
+        int gridsize = params.points_x * params.points_y * params.points_z;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            if (grid[i].voxel_type != other.grid[i].voxel_type)
+            {
+                grid[i].value -= other.grid[i].value;
+            }
+            else
+            {
+                grid[i].value += other.grid[i].value;
+            }
+        }
+    }
+
+    void CopyGrid(MeshingVoxelGrid& other)
+    {
+        if (params.points_x != other.params.points_x || params.points_y != other.params.points_y || params.points_z != other.params.points_z)
+        {
+            std::cout << "Incorrectly sized grids!" << std::endl;
+            return;
+        }
+
+        int gridsize = params.points_x * params.points_y * params.points_z;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            grid[i].value = other.grid[i].value;
+            grid[i].voxel_type = other.grid[i].voxel_type;
+        }
+    }
+
+    void CullEpsilon(double epsilon)
+    {
+        int gridsize = params.points_x * params.points_y * params.points_z;
+
+        for (int i = 0; i < gridsize; ++i)
+        {
+            double rounded_val = round(grid[i].value);
+            double abs_dif = abs(grid[i].value - rounded_val);
+
+            if (abs_dif < epsilon)
+            {
+                grid[i].value = rounded_val;
+            }
+        }
+    }
 
     /// <summary>
     /// Voxel grid black magic

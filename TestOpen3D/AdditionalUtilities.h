@@ -1,11 +1,22 @@
 #pragma once
 
+#include "open3d/Open3D.h"
+
+#include "STB_Image_Wrapper.h"
+
 #include <string>
 #include <vector>
 #include <filesystem>
 #include <fstream>
 
-inline void SplitString(std::string to_split, std::vector<std::string>& destination, char delim, std::string ignore_characters = "", bool cull_empty_strings = true)
+inline bool GetImageOpen3D(std::string filename, open3d::geometry::Image& image)
+{
+    STB_Image_Wrapper stbiw;
+
+    return stbiw.GetImageOpen3D(filename, image);
+}
+
+inline void SplitString(std::string to_split, std::vector<std::string>& destination, std::string delims, std::string ignore_characters = "", bool cull_empty_strings = true)
 {
     size_t iterator = 0;
     size_t loc = 0;
@@ -24,7 +35,7 @@ inline void SplitString(std::string to_split, std::vector<std::string>& destinat
 
     while (loc < to_split.size())
     {
-        loc = to_split.find(delim, iterator);
+        loc = to_split.find_first_of(delims, iterator);
         std::string temp_data = to_split.substr(iterator, loc - iterator);
 
         if (!cull_empty_strings || (temp_data.size() > 0))
@@ -90,4 +101,16 @@ inline std::string GetNumberFixedLength(int num, int length)
     to_return.append(iter_num);
 
     return to_return;
+}
+
+inline std::string RemoveFileExtention(std::string filename)
+{
+    auto loc = filename.rfind('.');
+
+    if (loc == std::string::npos)
+    {
+        return filename;
+    }
+    
+    return filename.substr(0, loc);
 }

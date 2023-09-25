@@ -5,3 +5,7 @@
 x64/
 TestOpen3D/_TEST_DATA
 *.abc
+*.vgff
+*.vgzf
+*.vgfi
+*.vgzi

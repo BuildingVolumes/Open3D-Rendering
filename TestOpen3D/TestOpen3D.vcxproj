@@ -156,7 +156,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;NDEBUG;BUILD_GUI;_GLIBCXX_USE_CXX11_ABI=0;WINDOWS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;NOMINMAX;_USE_MATH_DEFINES;_ENABLE_EXTENDED_ALIGNED_STORAGE;__TBB_LIB_NAME=tbb_static;OPEN3D_STATIC;GLEW_STATIC;FMT_HEADER_ONLY=1;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(OPEN_3D_DIR)\cpp;$(OPEN_3D_DIR)\3rdparty\fmt\include;$(OPEN_3D_DIR)\3rdparty\Eigen;$(OPEN_3D_DIR)\3rdparty\GLFW\include;$(OPEN_3D_DIR)\3rdparty\glew\include;$(OPEN_3D_BUILD_DIR)\k4a\src\ext_k4a\build\native\include;$(OPEN_3D_BUILD_DIR)\libjpeg-turbo-install\include;$(OPEN_3D_BUILD_DIR)\jsoncpp\include;$(ALEMBIC_DIR)\include;$(IMATH_DIR)\include;$(IMATH_DIR)\include\Imath;$(PACKMASTER_DIR)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OPEN_3D_DIR)\cpp;$(OPEN_3D_DIR)\3rdparty\fmt\include;$(OPEN_3D_DIR)\3rdparty\Eigen;$(OPEN_3D_DIR)\3rdparty\GLFW\include;$(OPEN_3D_DIR)\3rdparty\glew\include;$(OPEN_3D_BUILD_DIR)\k4a\src\ext_k4a\build\native\include;$(OPEN_3D_BUILD_DIR)\libjpeg-turbo-install\include;$(OPEN_3D_BUILD_DIR)\jsoncpp\include;$(ALEMBIC_DIR)\include;$(IMATH_DIR)\include;$(IMATH_DIR)\include\Imath;$(PACKMASTER_DIR)\include;D:\VsprojectsOnD\Open3D\TestOpen3D\TestOpen3D\_FFTW\_Unzipped</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -169,37 +169,53 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D.lib;$(OPEN_3D_BUILD_DIR)\assimp\lib\assimp-vc142-mt.lib;$(OPEN_3D_BUILD_DIR)\assimp\lib\IrrXML.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_glew.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\glfw3.lib;gdi32.lib;$(OPEN_3D_BUILD_DIR)\libjpeg-turbo-install\lib\turbojpeg-static.lib;$(OPEN_3D_BUILD_DIR)\jsoncpp\lib\jsoncpp.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_lzf.lib;$(OPEN_3D_BUILD_DIR)\libpng\lib\libpng16_static.lib;$(OPEN_3D_BUILD_DIR)\zlib\lib\zlibstatic.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_rply.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_tinyfiledialogs.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_qhullcpp.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_qhull_r.lib;opengl32.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_imgui.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filameshio.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filament.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filamat_lite.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filaflat.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filabridge.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\geometry.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\backend.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\bluegl.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\ibl.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\image.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\meshoptimizer.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\smol-v.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\utils.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\bluevk.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\tbbmalloc_static.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_intel_ilp64.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_core.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_sequential.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_tbb_thread.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\tbb_static.lib;$(OPEN_3D_BUILD_DIR)\ippicv\lib\ippiw.lib;$(OPEN_3D_BUILD_DIR)\ippicv\lib\ippicvmt.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4arecord.lib;$(ALEMBIC_DIR)\lib\Alembic.lib;$(IMATH_DIR)\lib\Imath-3_1.lib;$(PACKMASTER_DIR)\lib\vs2019\Release\uvpcore.lib;kernel32.lib;user32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D.lib;$(OPEN_3D_BUILD_DIR)\assimp\lib\assimp-vc142-mt.lib;$(OPEN_3D_BUILD_DIR)\assimp\lib\IrrXML.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_glew.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\glfw3.lib;gdi32.lib;$(OPEN_3D_BUILD_DIR)\libjpeg-turbo-install\lib\turbojpeg-static.lib;$(OPEN_3D_BUILD_DIR)\jsoncpp\lib\jsoncpp.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_lzf.lib;$(OPEN_3D_BUILD_DIR)\libpng\lib\libpng16_static.lib;$(OPEN_3D_BUILD_DIR)\zlib\lib\zlibstatic.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_rply.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_tinyfiledialogs.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_qhullcpp.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_qhull_r.lib;opengl32.lib;$(OPEN_3D_BUILD_DIR)\lib\Release\Open3D_3rdparty_imgui.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filameshio.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filament.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filamat_lite.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filaflat.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\filabridge.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\geometry.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\backend.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\bluegl.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\ibl.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\image.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\meshoptimizer.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\smol-v.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\utils.lib;$(OPEN_3D_BUILD_DIR)\filament\src\ext_filament\lib\x86_64\mt\bluevk.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\tbbmalloc_static.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_intel_ilp64.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_core.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_sequential.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\mkl_tbb_thread.lib;$(OPEN_3D_BUILD_DIR)\mkl_install\lib\tbb_static.lib;$(OPEN_3D_BUILD_DIR)\ippicv\lib\ippiw.lib;$(OPEN_3D_BUILD_DIR)\ippicv\lib\ippicvmt.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4a.lib;C:\Program Files\Azure Kinect SDK v1.4.1\sdk\windows-desktop\amd64\release\lib\k4arecord.lib;$(ALEMBIC_DIR)\lib\Alembic.lib;$(IMATH_DIR)\lib\Imath-3_1.lib;$(PACKMASTER_DIR)\lib\vs2019\Release\uvpcore.lib;D:\VsprojectsOnD\Open3D\TestOpen3D\TestOpen3D\_FFTW\_Unzipped\libfftw3-3.lib;D:\VsprojectsOnD\Open3D\TestOpen3D\TestOpen3D\_FFTW\_Unzipped\libfftw3f-3.lib;D:\VsprojectsOnD\Open3D\TestOpen3D\TestOpen3D\_FFTW\_Unzipped\libfftw3l-3.lib;kernel32.lib;user32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Abstract_Data.cpp" />
+    <ClCompile Include="AlembicExportSuite.cpp" />
     <ClCompile Include="AlembicWriter.cpp" />
     <ClCompile Include="CameraManager.cpp" />
+    <ClCompile Include="EncodeDecodeManager.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
     <ClCompile Include="Image_Data.cpp" />
     <ClCompile Include="KinectRenderer.cpp" />
     <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="MKV_Data.cpp" />
     <ClCompile Include="NodeWrapper.cpp" />
+    <ClCompile Include="PointCloudSuite.cpp" />
+    <ClCompile Include="STB_Image_Wrapper.cpp" />
+    <ClCompile Include="TestFFT.cpp" />
+    <ClCompile Include="TestMultiMesh.cpp" />
+    <ClCompile Include="TestZIP.cpp" />
     <ClCompile Include="TextureUnpacker.cpp" />
     <ClCompile Include="MeshingVoxelGrid.cpp" />
+    <ClCompile Include="VolumeSequence.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AbstractCommand.h" />
     <ClInclude Include="Abstract_Data.h" />
     <ClInclude Include="AdditionalUtilities.h" />
+    <ClInclude Include="AlembicExportSuite.h" />
     <ClInclude Include="AlembicWriter.h" />
     <ClInclude Include="CameraManager.h" />
     <ClInclude Include="ColorMapOptimizer.h" />
+    <ClInclude Include="EncodeDecodeManager.h" />
     <ClInclude Include="ErrorLogger.h" />
     <ClInclude Include="Image_Data.h" />
     <ClInclude Include="Livescan_Data.h" />
-    <ClInclude Include="MKV_Data.h" />
     <ClInclude Include="NodeWrapper.h" />
+    <ClInclude Include="PointCloudSuite.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="STB_Image_Wrapper.h" />
+    <ClInclude Include="TestFFT.h" />
+    <ClInclude Include="TestMultiMesh.h" />
+    <ClInclude Include="TestSuite.h" />
+    <ClInclude Include="TestZIP.h" />
     <ClInclude Include="TextureUnpacker.h" />
     <ClInclude Include="MeshingVoxelGrid.h" />
+    <ClInclude Include="VolumeSequence.h" />
     <ClInclude Include="VoxelGridData.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

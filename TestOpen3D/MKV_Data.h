@@ -125,6 +125,7 @@ namespace MKV_Rendering {
 		bool CycleCaptureForwards();
 		bool CycleCaptureBackwards();
 		bool SeekToTime(uint64_t time);
+		bool SeekToFrame(int frame);
 
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
 

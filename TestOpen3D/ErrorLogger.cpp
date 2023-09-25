@@ -1,6 +1,7 @@
 #include "ErrorLogger.h"
 #include <iostream>
 #include <assert.h>
+#include <fstream>
 
 std::vector<ErrorLogger::StackMessage*> ErrorLogger::call_stack = std::vector<ErrorLogger::StackMessage*>();
 
@@ -30,7 +31,17 @@ std::string ErrorLogger::GET_STACK()
 
 void ErrorLogger::LOG_ERROR(std::string error_message, bool abort_on_error)
 {
-	std::cout << error_message << GET_STACK() << std::endl;
+	std::string complete_error = error_message + GET_STACK();
+
+	std::cout << complete_error << std::endl;
+
+	std::ofstream writer;
+
+	writer.open("Open3DErrorList.txt");
+
+	writer.write(complete_error.c_str(), complete_error.length());
+
+	writer.close();
 
 	if (abort_on_error)
 	{

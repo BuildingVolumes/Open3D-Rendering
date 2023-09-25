@@ -1,5 +1,5 @@
 #include "CameraManager.h"
-#include "MKV_Data.h"
+//#include "MKV_Data.h"
 #include "Image_Data.h"
 #include "ErrorLogger.h"
 #include "VoxelGridData.h"
@@ -26,7 +26,16 @@
 #include <chrono>
 #include <uvpCore.hpp>
 
-#define PIPELINE_MODE 2
+#include "stb_image.h"
+
+#include "TestFFT.h"
+#include "TestZIP.h"
+#include "AlembicExportSuite.h"
+#include "PointCloudSuite.h"
+#include "TestMultiMesh.h"
+
+//#define PIPELINE_MODE 2
+#define PIPELINE_MODE 0
 
 using namespace open3d;
 using namespace open3d::core;
@@ -82,10 +91,20 @@ namespace MKV_Rendering {
         {
             auto tri = mesh->triangles_[i];
 
-            writer << "f " <<
-                (tri.x() + 1) << "/" << (tri.x() + 1) << "/" << (tri.x() + 1) << " " <<
-                (tri.y() + 1) << "/" << (tri.y() + 1) << "/" << (tri.y() + 1) << " " <<
-                (tri.z() + 1) << "/" << (tri.z() + 1) << "/" << (tri.z() + 1) << "\n";
+            if (mesh->triangle_uvs_.size() > 0)
+            {
+                writer << "f " <<
+                    (tri.x() + 1) << "/" << (tri.x() + 1) << "/" << (tri.x() + 1) << " " <<
+                    (tri.y() + 1) << "/" << (tri.y() + 1) << "/" << (tri.y() + 1) << " " <<
+                    (tri.z() + 1) << "/" << (tri.z() + 1) << "/" << (tri.z() + 1) << "\n";
+            }
+            else
+            {
+                writer << "f " <<
+                    (tri.x() + 1) << "//" << (tri.x() + 1) << " " <<
+                    (tri.y() + 1) << "//" << (tri.y() + 1) << " " <<
+                    (tri.z() + 1) << "//" << (tri.z() + 1) << "\n";
+            }
         }
 
         writer.close();
@@ -288,77 +307,77 @@ namespace MKV_Rendering {
     }
 
     //Currently skipping frames for some reason
-    void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
-    {
-        bool next_capture = true;
+    //void CreateImageArrayFromMKV(MKV_Data* data, std::string color_destination_folder, std::string depth_destination_folder, int max_output_images)
+    //{
+    //    bool next_capture = true;
+    //
+    //    int iter = 0;
+    //
+    //    std::filesystem::create_directories(color_destination_folder);
+    //    std::filesystem::create_directories(depth_destination_folder);
+    //
+    //    while (next_capture && iter < max_output_images)
+    //    {
+    //        auto rgbd_image = data->GetFrameRGBD();
+    //
+    //        std::string num = GetNumberFixedLength(iter, 8);
+    //
+    //        std::string timestamp = std::to_string(data->GetTimestampCached());
+    //
+    //        open3d::io::WriteImageToPNG(color_destination_folder + "/color_" + num + "_" + timestamp + ".png", rgbd_image->color_);
+    //        open3d::io::WriteImageToPNG(depth_destination_folder + "/depth_" + num + "_" + timestamp + ".png", rgbd_image->depth_);
+    //
+    //        next_capture = data->CycleCaptureForwards();
+    //
+    //        ++iter;
+    //    }
+    //}
 
-        int iter = 0;
+    //void SaveJSON(MKV_Data* data, std::string json_destination_folder_and_path)
+    //{
+    //    data->WriteIntrinsics(json_destination_folder_and_path);
+    //}
+    //
+    //void CopyCalibration(std::string calibration_filename, std::string source_folder, std::string destination_folder)
+    //{
+    //    std::filesystem::copy_file(source_folder + "/" + calibration_filename + ".log", destination_folder + "/" + calibration_filename + ".log", std::filesystem::copy_options::overwrite_existing);
+    //}
 
-        std::filesystem::create_directories(color_destination_folder);
-        std::filesystem::create_directories(depth_destination_folder);
-
-        while (next_capture && iter < max_output_images)
-        {
-            auto rgbd_image = data->GetFrameRGBD();
-
-            std::string num = GetNumberFixedLength(iter, 8);
-
-            std::string timestamp = std::to_string(data->GetTimestampCached());
-
-            open3d::io::WriteImageToPNG(color_destination_folder + "/color_" + num + "_" + timestamp + ".png", rgbd_image->color_);
-            open3d::io::WriteImageToPNG(depth_destination_folder + "/depth_" + num + "_" + timestamp + ".png", rgbd_image->depth_);
-
-            next_capture = data->CycleCaptureForwards();
-
-            ++iter;
-        }
-    }
-
-    void SaveJSON(MKV_Data* data, std::string json_destination_folder_and_path)
-    {
-        data->WriteIntrinsics(json_destination_folder_and_path);
-    }
-
-    void CopyCalibration(std::string calibration_filename, std::string source_folder, std::string destination_folder)
-    {
-        std::filesystem::copy_file(source_folder + "/" + calibration_filename + ".log", destination_folder + "/" + calibration_filename + ".log", std::filesystem::copy_options::overwrite_existing);
-    }
-
-    void SaveMKVDataForImages(int max_output, std::string mkv_folder_path, std::string image_folder_path, 
-        std::string intrinsics_filename, std::string calibration_filename, std::string color_folder_name, std::string depth_folder_name, double FPS)
-    {
-        auto directories = GetDirectories(mkv_folder_path);
-
-        int iter = 0;
-
-        for (auto dir : directories)
-        {
-            MKV_Data data(dir, "", "", iter);
-
-            std::string new_dir = image_folder_path + "/FramesCam" + GetNumberFixedLength(iter, 8);
-
-            CreateImageArrayFromMKV(&data, new_dir + "/" + color_folder_name, new_dir + "/" + depth_folder_name, max_output);
-            SaveJSON(&data, new_dir + "/" + intrinsics_filename);
-            CopyCalibration(calibration_filename, dir, new_dir);
-
-            std::ofstream structure_file;
-            structure_file.open(new_dir + "/.structure");
-
-            structure_file << "Version 0" << std::endl;
-            structure_file << "Type image" << std::endl;
-            structure_file << "Color " << color_folder_name << std::endl;
-            structure_file << "Depth " << depth_folder_name << std::endl;
-            structure_file << "Intrinsics_Json " << intrinsics_filename << std::endl;
-            structure_file << "Calibration_File " << calibration_filename << std::endl;
-
-            if (FPS > 0)
-            {
-                structure_file << "FPS " << std::to_string(FPS) << std::endl;
-            }
-
-            ++iter;
-        }
-    }
+    //void SaveMKVDataForImages(int max_output, std::string mkv_folder_path, std::string image_folder_path, 
+    //    std::string intrinsics_filename, std::string calibration_filename, std::string color_folder_name, std::string depth_folder_name, double FPS)
+    //{
+    //    auto directories = GetDirectories(mkv_folder_path);
+    //
+    //    int iter = 0;
+    //
+    //    for (auto dir : directories)
+    //    {
+    //        MKV_Data data(dir, "", "", iter);
+    //
+    //        std::string new_dir = image_folder_path + "/FramesCam" + GetNumberFixedLength(iter, 8);
+    //
+    //        CreateImageArrayFromMKV(&data, new_dir + "/" + color_folder_name, new_dir + "/" + depth_folder_name, max_output);
+    //        SaveJSON(&data, new_dir + "/" + intrinsics_filename);
+    //        CopyCalibration(calibration_filename, dir, new_dir);
+    //
+    //        std::ofstream structure_file;
+    //        structure_file.open(new_dir + "/.structure");
+    //
+    //        structure_file << "Version 0" << std::endl;
+    //        structure_file << "Type image" << std::endl;
+    //        structure_file << "Color " << color_folder_name << std::endl;
+    //        structure_file << "Depth " << depth_folder_name << std::endl;
+    //        structure_file << "Intrinsics_Json " << intrinsics_filename << std::endl;
+    //        structure_file << "Calibration_File " << calibration_filename << std::endl;
+    //
+    //        if (FPS > 0)
+    //        {
+    //            structure_file << "FPS " << std::to_string(FPS) << std::endl;
+    //        }
+    //
+    //        ++iter;
+    //    }
+    //}
 
 
     
@@ -444,6 +463,118 @@ namespace MKV_Rendering {
         MKV_Rendering::VoxelGridData vkd;
         alembicCode(mkv_root_folder, images_root_folder, structure_file_name, livescan_root_folder, output_folder, vkd);
     }
+
+    void image_encode_test()
+    {
+        EncDec::EncodeDecodeManager edm;
+
+        std::string mesh_name = "Hogue_09_14_2022.obj";
+        //std::string mesh_name = "TriangleDefaultCube.obj";
+
+        auto mesh = std::make_shared<geometry::TriangleMesh>();
+
+        if (!open3d::io::ReadTriangleMeshFromOBJ(mesh_name, *mesh, io::ReadTriangleMeshOptions()))
+        {
+            Dbg("Couldn't read a mesh named " + mesh_name + "!");
+            return;
+        }
+
+        //for (int i = 0; i < mesh->vertex_normals_.size(); ++i)
+        //{
+        //    std::cout << "VERTEX NORMAL " << i << ": " << mesh->vertex_normals_[i].transpose() << std::endl;
+        //    std::cout << "VERTEX " << i << ": " << mesh->vertices_[i].transpose() << std::endl;
+        //    std::cout << std::endl;
+        //}
+
+        //Dbg("UVs: " + std::to_string(mesh->vert.size()));
+        //Dbg("Normals: " + std::to_string(mesh->vertex_normals_.size()));
+
+        int im_size = 2048;
+
+        auto image = edm.DefaultEncodeOBJ(mesh, 4, 1);
+        //auto image = edm.MortonEncodeOBJ(mesh, im_size, im_size, 4, 2);
+
+        //for (int i = 0; i < image->data_.size(); i += 8)
+        //{
+        //    image->data_[i + 0] = 10;
+        //    image->data_[i + 1] = 10;
+        //    image->data_[i + 2] = 20;
+        //    image->data_[i + 3] = 30;
+        //    image->data_[i + 4] = 40;
+        //    image->data_[i + 5] = 50;
+        //    image->data_[i + 6] = 60;
+        //    image->data_[i + 7] = 0;
+        //}
+        //
+        //for (int i = 0; i < 100; ++i)
+        //{
+        //    std::cout << (int)image->data_[i] << std::endl;
+        //}
+
+        std::string the_date = "12_1_2022";
+
+        //DrawObject(*image);
+
+        std::cout << image->width_ << ", " << image->height_ << ", " << image->num_of_channels_ << ", " << image->bytes_per_channel_ << std::endl;
+
+        DrawObject(*image);
+
+        std::string filename = "Encoded_" + the_date + ".png";
+
+        open3d::io::WriteImageToPNG(filename, *image);
+
+        std::cout << "SAVED!" << std::endl;
+
+        //open3d::io::WriteImageToPNG("MortonEncoded_" + the_date + ".png", *image);
+    }
+
+    void image_decode_test()
+    {
+        EncDec::EncodeDecodeManager edm;
+
+        std::string image_name = "Encoded_12_1_2022.png";
+        //std::string image_name = "Encoded_11_23_2022.png";
+        //std::string image_name = "Encoded_10_25_2022.png";
+        //std::string image_name = "MortonEncoded_10_25_2022.png";
+
+        auto image = std::make_shared<geometry::Image>();
+
+        if (!open3d::io::ReadImageFromPNG(image_name, *image))
+        {
+            return;
+        }
+
+        std::cout << image->width_ << ", " << image->height_ << ", " << image->num_of_channels_ << ", " << image->bytes_per_channel_ << std::endl;
+
+
+        //for (int i = 0; i < image->data_.size(); ++i)
+        //{
+        //    if (image->data_[i] != 0)
+        //    {
+        //        std::cout << (int)image->data_[i] << ", " << i << std::endl;
+        //    }
+        //}
+        //
+        //system("pause");
+
+        DrawObject(*image);
+
+        auto mesh = edm.DefaultDecodeOBJ(image);
+
+        Dbg(std::to_string(mesh->vertex_normals_.size()));
+        //auto mesh = edm.MortonDecodeOBJ(image);
+
+        DrawObject(*mesh);
+
+        open3d::io::WriteTriangleMeshToOBJ("TestMeshToSeeWhatWentWrong_OPEN3D.obj", *mesh, true, false, true, false, true, false);
+        WriteOBJ("TestMeshToSeeWhatWentWrong.obj", "", &(*mesh));
+    }
+
+    void ExtremeImageTesting()
+    {
+
+    }
+
     void refactored_code_test()
     {
         std::string mkv_root_folder = "Kinect Test 1";
@@ -465,6 +596,8 @@ namespace MKV_Rendering {
         //Also the extrinsics are broken in it
 
         
+
+        EncDec::EncodeDecodeManager edm;
         
         CameraManager cm;
         //cm.LoadTypeStructure(mkv_root_folder, structure_file_name);
@@ -473,7 +606,24 @@ namespace MKV_Rendering {
         //cm.LoadTypeLivescan(livescan_single_image_test, 5);
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "july8-afternoon_0/MATTES", 5);
         //cm.LoadTypeLivescan("_TEST_DATA/july15-spinninghogue_0", "_TEST_DATA/july15-spinninghogue_0", 5);
-        cm.LoadTypeLivescan("_TEST_DATA/jakob_test", "_TEST_DATA/jakob_test", 5);
+        //cm.LoadTypeLivescan("_TEST_DATA/jakob_test", "_TEST_DATA/jakob_test", 5);
+        cm.LoadTypeLivescan();
+
+
+        cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_0", "_TEST_DATA/_TestingNewExtrinsics/client_0/Intrinsics_Calib_0.json", "_TEST_DATA/_TestingNewExtrinsics/client_0/Extrinsics_0.log",
+            "Color_", "Depth_", "Matte_", 5.0);
+        cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_1", "_TEST_DATA/_TestingNewExtrinsics/client_1/Intrinsics_Calib_1.json", "_TEST_DATA/_TestingNewExtrinsics/client_1/Extrinsics_1.log",
+            "Color_", "Depth_", "Matte_", 5.0);
+        //cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_2", "_TEST_DATA/_TestingNewExtrinsics/client_2/Intrinsics_Calib_2.json", "_TEST_DATA/_TestingNewExtrinsics/client_2/Extrinsics_2.log",
+        //    "Color_", "Depth_", "Matte_", 5.0);
+        //cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_3", "_TEST_DATA/_TestingNewExtrinsics/client_3/Intrinsics_Calib_3.json", "_TEST_DATA/_TestingNewExtrinsics/client_3/Extrinsics_3.log",
+        //    "Color_", "Depth_", "Matte_", 5.0);
+        //cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_4", "_TEST_DATA/_TestingNewExtrinsics/client_4/Intrinsics_Calib_4.json", "_TEST_DATA/_TestingNewExtrinsics/client_4/Extrinsics_4.log",
+        //    "Color_", "Depth_", "Matte_", 5.0);
+        //cm.AddCameraLivescan("_TEST_DATA/_TestingNewExtrinsics/client_5", "_TEST_DATA/_TestingNewExtrinsics/client_5/Intrinsics_Calib_5.json", "_TEST_DATA/_TestingNewExtrinsics/client_5/Extrinsics_5.log",
+        //    "Color_", "Depth_", "Matte_", 5.0);
+
+
         //cm.LoadTypeLivescan("july8-afternoon_0/july8-afternoon_0", "", 5);
 
         
@@ -503,17 +653,17 @@ namespace MKV_Rendering {
         //
         //return;
 
-        //auto mesh = ErrorLogger::EXECUTE(
-        //    "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
-        //);
+        auto mesh = ErrorLogger::EXECUTE(
+            "Generate Mesh", &cm, &CameraManager::GetMeshAtTimestamp, &vgd, timestamp
+        );
+        
+        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
+
+        //open3d::geometry::TriangleMesh mesh;
         //
-        //auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh.ToLegacyTriangleMesh());
-
-        open3d::geometry::TriangleMesh mesh;
-
-        io::ReadTriangleMesh("_TEST_DATA/hogue_160/frame_160.obj", mesh);
-
-        auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh);
+        //io::ReadTriangleMesh("_TEST_DATA/hogue_160/frame_160.obj", mesh);
+        //
+        //auto mesh_legacy = std::make_shared<geometry::TriangleMesh>(mesh);
 
         std::cout << mesh_legacy->vertices_.size() << ", " << (mesh_legacy->triangles_.size() * 3) << std::endl;
 
@@ -539,8 +689,18 @@ namespace MKV_Rendering {
 
         DrawObject(*mesh_legacy);
 
-        WriteOBJ("Hogue_08_27_2021.obj", "", &(*mesh_legacy));
-        open3d::io::WriteImageToPNG("Hogue_08_27_2021.png", *stitched_image);
+        int encoded_image_dim = 2048;
+
+        //auto encoded_image = DefaultEncodeOBJ(mesh_legacy, encoded_image_dim, encoded_image_dim, 4, 1);
+        auto encoded_image = edm.MortonEncodeOBJ(mesh_legacy, 4, 1);
+
+        DrawObject(*encoded_image);
+
+        std::string the_date = "09_14_2022";
+
+        WriteOBJ("Hogue_" + the_date + ".obj", "", &(*mesh_legacy));
+        open3d::io::WriteImageToPNG("Hogue_" + the_date + ".png", *stitched_image);
+        open3d::io::WriteImageToPNG("MortonEncoded_" + the_date + ".png", *encoded_image);
         
 
         //DrawMesh(*mesh_legacy);
@@ -561,7 +721,21 @@ void CodeC()
 
 void CodeJ()
 {
-    ErrorLogger::EXECUTE("Refactored Code Test", &MKV_Rendering::refactored_code_test);
+    //ErrorLogger::EXECUTE("Refactored Code Test", &MKV_Rendering::refactored_code_test);
+    //ErrorLogger::EXECUTE("Decoding Code Test", &MKV_Rendering::image_decode_test);
+    //ErrorLogger::EXECUTE("Encoding Code Test", &MKV_Rendering::image_encode_test);
+
+    TestSuite* suite = nullptr;
+
+    //suite = new TestFFT();
+    suite = new TestMultiMesh();
+    //suite = new AlembicExportSuite();
+    //suite = new PointCloudSuite();
+    //suite = new TestZIP();
+
+    suite->run(0, nullptr);
+
+    delete suite;
 }
 
 

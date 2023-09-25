@@ -4,12 +4,15 @@
 
 #include "AdditionalUtilities.h"
 
+#define DEBUG_ENABLED_LIVESCAN_DATA 0
+//#define DEBUG_ENABLED_LIVESCAN_DATA 1
+
 void MKV_Rendering::Livescan_Data::UpdateTimestamp()
 {
 	_timestamp = (double)current_frame / FPS * 1000000.0;
 }
 
-void MKV_Rendering::Livescan_Data::LoadImages()
+bool MKV_Rendering::Livescan_Data::LoadImages(std::string color_handle, std::string depth_handle, std::string matte_handle)
 {
 	std::vector<std::string> all_files;
 
@@ -17,76 +20,77 @@ void MKV_Rendering::Livescan_Data::LoadImages()
 
 	for (auto s : all_files)
 	{
-		std::vector<std::string> split_extension;
-		SplitString(s, split_extension, '.', "\\/");
+		//std::vector<std::string> split_extension;
+		std::vector<std::string> split_num;
+		std::string file_clipped = RemoveFileExtention(s);
+		//SplitString(s, split_extension, ".", "\\/");
 
-		if ((split_extension.front().find("Color_") != std::string::npos) && (split_extension.back() == "jpg"))
+		if (file_clipped.find(matte_handle) != std::string::npos)
 		{
-			std::vector<std::string> split_num;
-			SplitString(split_extension.front(), split_num, '_');
+			file_clipped = RemoveFileExtention(file_clipped);
+			SplitString(file_clipped, split_num, "_");
+			int loc = std::stoi(split_num.back());
+			matte_files[loc] = s;
+			//matte_files[matte_count] = s;
+
+			++matte_count;
+		}
+		else if (file_clipped.find(color_handle) != std::string::npos)
+		{
+			SplitString(file_clipped, split_num, "_");
 			int loc = std::stoi(split_num.back());
 			color_files[loc] = s;
+			//color_files[color_count] = s;
+
+			++color_count;
+			++frame_count;
+
+			//std::cout << file_clipped << ": " << loc << std::endl;
 		}
-		else if ((split_extension.front().find("Depth_") != std::string::npos) && (split_extension.back() == "png"))
+		else if (file_clipped.find(depth_handle) != std::string::npos)
 		{
-			std::vector<std::string> split_num;
-			SplitString(split_extension.front(), split_num, '_');
+			SplitString(file_clipped, split_num, "_");
 			int loc = std::stoi(split_num.back());
 			depth_files[loc] = s;
-		}
-		else if (split_extension.back() == "json")
-		{
-			std::cout << s << std::endl;
-			intrinsics_file = s;
+			//depth_files[depth_count] = s;
+
+			++depth_count;
 		}
 	}
 
-	if (intrinsics_file == "")
-	{
-		E_LOG("No intrinsics json found!", true);
-	}
+	std::cout << "COLOR: " << color_files.size() << ", DEPTH: " << depth_files.size() << ", MATTE: " << matte_files.size() << std::endl;
 
-	if (matte_folder_name != "")
-	{
-		std::vector<std::string> all_mattes;
-
-		open3d::utility::filesystem::ListFilesInDirectory(matte_folder_name, all_mattes);
-
-		for (auto s : all_mattes)
-		{
-			std::vector<std::string> split_extension;
-			SplitString(s, split_extension, '.', "\\/");
-
-			if (s.find("matte") != std::string::npos)
-			{
-				std::vector<std::string> split_num;
-				SplitString(split_extension.front(), split_num, '_');
-				int loc = std::stoi(split_num.back());
-				matte_files[loc] = s;
-			}
-		}
-	}
-
+	return true;
 }
 
-void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
+bool MKV_Rendering::Livescan_Data::GetIntrinsicTensor(std::string path)
 {
-	std::ifstream intrinsic_file = std::ifstream(intrinsics_file);
+	intrinsics_file_name = path;
+
+	std::ifstream intr_file = std::ifstream(path);
+
+	if (!intr_file.is_open())
+	{
+		E_LOG("Failed to open intrinsics file: " + path, false);
+		return false;
+	}
+
 	std::string file_contents;
 
-	intrinsic_file.seekg(0, std::ios::end);
-	size_t file_length = intrinsic_file.tellg();
-	intrinsic_file.seekg(0, std::ios::beg);
+	intr_file.seekg(0, std::ios::end);
+	size_t file_length = intr_file.tellg();
+	intr_file.seekg(0, std::ios::beg);
 
 	file_contents.resize(file_length);
-	intrinsic_file.read(&file_contents[0], file_length);
+	intr_file.read(&file_contents[0], file_length);
 
-	intrinsic_file.close();
+	intr_file.close();
 
 	k4a_result_t res = k4a_calibration_get_from_raw(&file_contents[0], file_contents.size() + 1, k4a_depth_mode_t::K4A_DEPTH_MODE_NFOV_UNBINNED, k4a_color_resolution_t::K4A_COLOR_RESOLUTION_720P, &calibration);
 	if (res == k4a_result_t::K4A_RESULT_FAILED)
 	{
 		std::cout << "ERROR: FAILED TO READ INTRINSICS JSON!" << std::endl;
+		return false;
 	}
 
 	auto params = calibration.color_camera_calibration.intrinsics.parameters;
@@ -104,20 +108,71 @@ void MKV_Rendering::Livescan_Data::GetIntrinsicTensor()
 		});
 
 	std::cout << intrinsic_t.ToString() << std::endl;
+
+	return true;
 }
 
-void MKV_Rendering::Livescan_Data::GetExtrinsicTensor()
+bool MKV_Rendering::Livescan_Data::GetExtrinsicTensor(std::string path)
 {
-	for (int i = 0; i < 16; ++i)
+	std::vector<std::string> extrinsic_individual;
+
+	std::fstream extr_file;
+	extr_file.open(path);
+
+	if (!extr_file.is_open())
 	{
-		extrinsic_mat.block<1, 1>(i / 4, i % 4)[0] = std::stof(extrinsic_individual[i]);
+		E_LOG("Failed to open extrinsics file: " + path, false);
+		return false;
 	}
 
-	std::cout << extrinsic_mat << std::endl;
+	std::vector<std::string> lines;
+
+	std::map<std::string, std::string> camera_structure;
+
+	std::string parser = "";
+
+	std::vector<std::string> extrinsics_string;
+
+	try
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			std::getline(extr_file, parser);
+			extrinsics_string.push_back(parser);
+		}
+
+		for (auto s : extrinsics_string)
+		{
+			std::vector<std::string> split;
+		
+			SplitString(s, split, " \t");
+		
+			for (auto s_2 : split)
+			{
+				extrinsic_individual.push_back(s_2);
+			}
+		}
+
+		for (int i = 0; i < 16; ++i)
+		{
+			extrinsic_mat.block<1, 1>(i / 4, i % 4)[0] = std::stof(extrinsic_individual[i]);
+		}
+	}
+	catch (std::exception e)
+	{
+		E_LOG(std::string("ERROR: ") + e.what(), false);
+		return false;
+	}
 
 	extrinsic_mat = extrinsic_mat.inverse();
-	
+
 	extrinsic_t = open3d::core::eigen_converter::EigenMatrixToTensor(extrinsic_mat);
+
+	std::cout << extrinsic_t.ToString() << std::endl;
+
+	//extrinsic_t = extrinsic_t.Inverse();
+
+	return true;
 }
 
 open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geometry::Image* old_depth, open3d::geometry::Image* color)
@@ -134,11 +189,13 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 	new_depth.num_of_channels_ = old_depth->num_of_channels_;
 	new_depth.data_.resize(height * width * new_depth.bytes_per_channel_);
 
+#if DEBUG_ENABLED_LIVESCAN_DATA
 	std::cout <<
 		new_depth.height_ << ", " <<
 		new_depth.width_ << ", " <<
 		new_depth.bytes_per_channel_ << ", " <<
 		new_depth.num_of_channels_ << std::endl;
+#endif
 
 	k4a_image_t k4a_transformed_depth = nullptr;
 	k4a_image_t k4a_depth = nullptr;
@@ -189,26 +246,45 @@ open3d::geometry::Image MKV_Rendering::Livescan_Data::TransformDepth(open3d::geo
 	return new_depth;
 }
 
-MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, int index, double FPS) : Abstract_Data(data_folder, index), FPS(FPS)
+//MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string>& extrinsics, int index, double FPS) : Abstract_Data(data_folder, index), FPS(FPS)
+//{
+//	matte_folder_name = matte_folder;
+//
+//	for (auto s : extrinsics)
+//	{
+//		std::vector<std::string> split;
+//
+//		SplitString(s, split, " \t");
+//
+//		for (auto s_2 : split)
+//		{
+//			extrinsic_individual.push_back(s_2);
+//		}
+//	}
+//
+//	ErrorLogger::EXECUTE("Load Images", this, &Livescan_Data::LoadImages);
+//
+//	ErrorLogger::EXECUTE("Create Intrinsic Tensor", this, &Livescan_Data::GetIntrinsicTensor);
+//	ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &Livescan_Data::GetExtrinsicTensor);
+//
+//	auto im = open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second);
+//
+//	int imageWidth = im->GetCols();
+//	int imageHeight = im->GetRows();
+//
+//	transform = k4a_transformation_create(&calibration);
+//}
+
+MKV_Rendering::Livescan_Data::Livescan_Data(std::string extrinsics_file, std::string intrinsics_file, std::string data_folder, int index, double FPS, 
+	std::string color_handle, std::string depth_handle, std::string matte_handle) : Abstract_Data(data_folder, index), FPS(FPS)
 {
-	matte_folder_name = matte_folder;
+	intrinsics_file_name = intrinsics_file;
+	extrinsics_file_name = extrinsics_file;
 
-	for (auto s : extrinsics)
-	{
-		std::vector<std::string> split;
+	if (!ErrorLogger::EXECUTE("Create Intrinsic Tensor", this, &Livescan_Data::GetIntrinsicTensor, intrinsics_file)) return;
+	if (!ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &Livescan_Data::GetExtrinsicTensor, extrinsics_file)) return;
 
-		SplitString(s, split, ' ');
-
-		for (auto s_2 : split)
-		{
-			extrinsic_individual.push_back(s_2);
-		}
-	}
-
-	ErrorLogger::EXECUTE("Load Images", this, &Livescan_Data::LoadImages);
-
-	ErrorLogger::EXECUTE("Create Intrinsic Tensor", this, &Livescan_Data::GetIntrinsicTensor);
-	ErrorLogger::EXECUTE("Create Extrinsic Tensor", this, &Livescan_Data::GetExtrinsicTensor);
+	if (!ErrorLogger::EXECUTE("Load Images", this, &Livescan_Data::LoadImages, color_handle, depth_handle, matte_handle)) return;
 
 	auto im = open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second);
 
@@ -216,6 +292,8 @@ MKV_Rendering::Livescan_Data::Livescan_Data(std::string data_folder, std::string
 	int imageHeight = im->GetRows();
 
 	transform = k4a_transformation_create(&calibration);
+
+	cameraOK = true;
 }
 
 MKV_Rendering::Livescan_Data::~Livescan_Data()
@@ -283,6 +361,24 @@ bool MKV_Rendering::Livescan_Data::SeekToTime(uint64_t time)
 	return true;
 }
 
+bool MKV_Rendering::Livescan_Data::SeekToFrame(int frame)
+{
+	auto upper = color_files.upper_bound(frame);
+
+	if (upper == color_files.end())
+	{
+		current_frame = color_files.rbegin()->first;
+		UpdateTimestamp();
+		ErrorLogger::LOG_ERROR("Reached end of image folder!");
+		return false;
+	}
+
+	current_frame = frame;
+	UpdateTimestamp();
+
+	return true;
+}
+
 std::shared_ptr<open3d::geometry::RGBDImage> MKV_Rendering::Livescan_Data::GetFrameRGBD()
 {
 	auto col = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second)).ToLegacyImage();
@@ -317,6 +413,8 @@ open3d::camera::PinholeCameraParameters MKV_Rendering::Livescan_Data::GetParamet
 
 void MKV_Rendering::Livescan_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
 {
+	std::cout << "Packing frame " << index << "..." << std::endl;
+
 	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second));
 	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
 
@@ -350,9 +448,23 @@ void MKV_Rendering::Livescan_Data::PackIntoNewVoxelGrid(MeshingVoxelGrid* grid)
 	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second)).ToLegacyImage();
 	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();
 
+#if DEBUG_ENABLED_LIVESCAN_DATA == 1
 	std::cout << "current frame: " << current_frame << "," << color_files.lower_bound(current_frame)->second << ", " << depth_files.lower_bound(current_frame)->second << std::endl;
-
+#endif
 	auto transformed_depth = ErrorLogger::EXECUTE("Transforming Depth", this, &Livescan_Data::TransformDepth, &depth, &color);
 
 	grid->AddImage(color, transformed_depth, extrinsic_mat, intrinsic_mat);
+}
+
+void MKV_Rendering::Livescan_Data::PackIntoPointCloud(open3d::geometry::PointCloud* cloud)
+{
+	open3d::geometry::PointCloud new_cloud;
+
+	new_cloud.Clear();
+
+	auto rgbd = GetFrameRGBD();
+
+	new_cloud.CreateFromRGBDImage((*rgbd), GetParameters().intrinsic_, extrinsic_mat, true);
+
+	*cloud += new_cloud;
 }

@@ -76,10 +76,10 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
     UvpOperationInputT uvpInput;
 
     uvpInput.m_pDeviceId = "cpu";
-    //uvpInput.m_RenderResult = true;
-    uvpInput.m_RenderInvalidIslands = true;
+    uvpInput.m_RenderResult = false;// true;
+    uvpInput.m_RenderInvalidIslands = false;// true;
     uvpInput.m_RealtimeSolution = true;
-    uvpInput.m_Benchmark = true;
+    uvpInput.m_Benchmark = false; // true;
     uvpInput.m_Opcode = UVP_OPCODE::PACK;
 
     UvpOpExecutorT opExecutor(debug_info);
@@ -182,25 +182,26 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
 
     uv_solution.resize(mesh->triangle_uvs_.size());
 
-    double w = (double)outputImage->width_;
-    double h = (double)outputImage->height_;
+    double width_destination = (double)outputImage->width_;
+    double height_destination = (double)outputImage->height_;
 
-    int intW = outputImage->width_;
-    int intH = outputImage->height_;
+    int width_destination_int = outputImage->width_;
+    int height_destination_int = outputImage->height_;
 
-    double w2 = (double)color_array->at(0).width_;
-    double h2 = (double)color_array->at(0).height_;
+    double width_source = (double)color_array->at(0).width_;
+    double height_source = (double)color_array->at(0).height_;
 
     double step = 1.0 / sqrt(2.0);
 
-    std::vector<Eigen::Vector2d> baryc;
-    std::vector<Eigen::Vector2d> baryc2;
+    std::vector<Eigen::Vector2d> baryc_source;
+    std::vector<Eigen::Vector2d> baryc_destination;
 
-    baryc.resize(3);
-    baryc2.resize(3);
+    baryc_source.resize(3);
+    baryc_destination.resize(3);
 
+    //May be useless, delete later if so
     std::vector<float> image_weights;
-    image_weights.resize(intW * intH, 0);
+    image_weights.resize(width_destination_int * height_destination_int, 0);
 
     //Re-apply UVs
     const auto& islands = pIslandsMsg->m_Islands;
@@ -222,8 +223,8 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
             {
                 const UvVertT& origVert = m_VertArray[vertIdx];
 
-                baryc2[v_num].x() = origVert.m_UvCoords[0] * w2;
-                baryc2[v_num].y() = origVert.m_UvCoords[1] * h2;
+                baryc_source[v_num].x() = origVert.m_UvCoords[0] * width_source;
+                baryc_source[v_num].y() = origVert.m_UvCoords[1] * height_source;
 
                 Eigen::Vector4d transformedUV = solutionMatrix * Eigen::Vector4d(origVert.m_UvCoords[0], origVert.m_UvCoords[1], 0.0, 1.0);
 
@@ -231,55 +232,63 @@ bool TextureUnpacker::PerformTextureUnpack(std::vector<open3d::geometry::Image>*
                 mesh->triangle_uvs_[vertIdx].y() = transformedUV.y();
                 uv_solution[vertIdx] = island_matrices.size();
 
-                baryc[v_num].x() = transformedUV.x() * w;
-                baryc[v_num].y() = transformedUV.y() * h;
+                baryc_destination[v_num].x() = transformedUV.x() * width_destination;
+                baryc_destination[v_num].y() = transformedUV.y() * height_destination;
 
                 ++v_num;
             }
 
-            Eigen::Vector2d baryc_dim_a = baryc[0] - baryc[1];
-            Eigen::Vector2d baryc_dim_b = baryc[0] - baryc[2];
+            Eigen::Vector2d baryc_dim_a = baryc_destination[0] - baryc_destination[1];
+            Eigen::Vector2d baryc_dim_b = baryc_destination[0] - baryc_destination[2];
+            Eigen::Vector2d baryc_dim_c = baryc_destination[1] - baryc_destination[2];
 
-            float baryc_max_a = std::max(abs(baryc_dim_a.x()), abs(baryc_dim_a.y()));
-            float baryc_max_b = std::max(abs(baryc_dim_b.x()), abs(baryc_dim_b.y()));
+            double max_dist = std::max(std::max(sqrt(baryc_dim_a.dot(baryc_dim_a)), sqrt(baryc_dim_b.dot(baryc_dim_b))), sqrt(baryc_dim_c.dot(baryc_dim_c)));
 
-            double baryc_step_a = step / baryc_max_a;
-            double baryc_step_b = step / baryc_max_b;
-
-            for (double baryc_alpha = 0.0; baryc_alpha < 1.0; baryc_alpha += baryc_step_a)
+            if (max_dist == 0) //Triangle has no area
             {
-                for (double baryc_beta = 0.0; baryc_beta < 1.0 - baryc_alpha; baryc_beta += baryc_step_b)
+                continue;
+            }
+
+            double baryc_step_a = step / max_dist;
+            double baryc_step_b = step / max_dist;
+
+            double offset = 1;
+
+            for (double baryc_alpha = (-offset) * baryc_step_a; baryc_alpha < 1.0 + offset * baryc_step_a; baryc_alpha += baryc_step_a)
+            {
+                for (double baryc_beta = (-offset) * baryc_step_b; baryc_beta < 1.0 - (baryc_alpha * offset) + offset * baryc_step_b; baryc_beta += baryc_step_b)
                 {
-                    double m0 = (1.0 - baryc_alpha - baryc_beta);
-                    double m1 = baryc_alpha;
-                    double m2 = baryc_beta;
+                    double p0 = (1.0 - baryc_alpha - baryc_beta);
+                    double p1 = baryc_alpha;
+                    double p2 = baryc_beta;
 
-                    Eigen::Vector2d pixel1 = baryc[0] * m0 + baryc[1] * m1 + baryc[2] * m2;
-                    Eigen::Vector2d pixel2 = baryc2[0] * m0 + baryc2[1] * m1 + baryc2[2] * m2;
+                    Eigen::Vector2d pixel_source = baryc_source[0] * p0 + baryc_source[1] * p1 + baryc_source[2] * p2;
+                    Eigen::Vector2d pixel_destination = baryc_destination[0] * p0 + baryc_destination[1] * p1 + baryc_destination[2] * p2;
 
-                    double x1 = std::floor(pixel1.x());
-                    double x2 = x1 + 1;
-                    double y1 = std::floor(pixel1.y());
-                    double y2 = y1 + 1;
+                    double x_source_min = std::floor(pixel_source.x());
+                    double x_source_max = x_source_min + 1;
+                    double y_source_min = std::floor(pixel_source.y());
+                    double y_source_max = y_source_min + 1;
 
-                    double deltaX = x2 - pixel1.x();
-                    double deltaY = y2 - pixel1.y();
+                    double delta_x = x_source_max - pixel_source.x();
+                    double delta_y = y_source_max - pixel_source.y();
 
-                    int u0 = std::clamp(x1, 0.0, w - 1.0);
-                    int v0 = std::clamp(y1, 0.0, h - 1.0);
-                    int u1 = std::clamp(x2, 0.0, w - 1.0);
-                    int v1 = std::clamp(y2, 0.0, h - 1.0);
+                    int u_source_min = std::clamp(x_source_min, 0.0, width_source - 1.0);
+                    int v_source_min = std::clamp(y_source_min, 0.0, height_source - 1.0);
+                    int u_source_max = std::clamp(x_source_max, 0.0, width_source - 1.0);
+                    int v_source_max = std::clamp(y_source_max, 0.0, height_source - 1.0);
 
-                    int u2 = std::clamp(pixel2.x(), 0.0, w2 - 1.0);
-                    int v2 = std::clamp(pixel2.y(), 0.0, h2 - 1.0);
+                    int u_destination = std::clamp(pixel_destination.x(), 0.0, width_destination - 1.0);
+                    int v_destination = std::clamp(pixel_destination.y(), 0.0, height_destination - 1.0);
 
-                    v0 = h - v0 - 1;
-                    v1 = h - v1 - 1;
-                    v2 = h2 - v2 - 1;
+                    //Invert the Y coords
+                    v_source_min = height_source - v_source_min - 1;
+                    v_source_max = height_source - v_source_max - 1;
+                    v_destination = height_destination - v_destination - 1;
 
-                    (*outputImage->PointerAt<uint8_t>(u0, v0, 0)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 0));
-                    (*outputImage->PointerAt<uint8_t>(u0, v0, 1)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 1));
-                    (*outputImage->PointerAt<uint8_t>(u0, v0, 2)) = (*color_array->at(source_image).PointerAt<uint8_t>(u2, v2, 2));
+                    (*outputImage->PointerAt<uint8_t>(u_destination, v_destination, 0)) = (*color_array->at(source_image).PointerAt<uint8_t>(u_source_min, v_source_min, 0));
+                    (*outputImage->PointerAt<uint8_t>(u_destination, v_destination, 1)) = (*color_array->at(source_image).PointerAt<uint8_t>(u_source_min, v_source_min, 1));
+                    (*outputImage->PointerAt<uint8_t>(u_destination, v_destination, 2)) = (*color_array->at(source_image).PointerAt<uint8_t>(u_source_min, v_source_min, 2));
 
                     //One day the code below will work
                     

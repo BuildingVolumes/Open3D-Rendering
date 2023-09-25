@@ -22,20 +22,26 @@ namespace MKV_Rendering {
 		/// </summary>
 		std::map<int, std::string> color_files;
 
+		int color_count = 0;
+
 		/// <summary>
 		/// map of timestamp to depth image directory/name
 		/// </summary>
 		std::map<int, std::string> depth_files;
+
+		int depth_count = 0;
 
 		/// <summary>
 		/// map of timestamp to matte directory/name
 		/// </summary>
 		std::map<int, std::string> matte_files;
 
+		int matte_count = 0;
+
 		/// <summary>
 		/// The extrinsic properties of this camera (rotation + position)
 		/// </summary>
-		std::vector<std::string> extrinsic_individual;
+		//std::vector<std::string> extrinsic_individual;
 
 		/// <summary>
 		/// Where to find the mattes - will be deprecated soon, assumed same directory
@@ -45,7 +51,12 @@ namespace MKV_Rendering {
 		/// <summary>
 		/// Where to find the intrinsics
 		/// </summary>
-		std::string intrinsics_file;
+		std::string intrinsics_file_name;
+
+		/// <summary>
+		/// Where to find the extrinsics
+		/// </summary>
+		std::string extrinsics_file_name;
 
 		/// <summary>
 		/// Handle to livescan playback
@@ -76,10 +87,10 @@ namespace MKV_Rendering {
 		/// Caches the current playback time
 		/// </summary>
 		void UpdateTimestamp();
-		void LoadImages();
+		bool LoadImages(std::string color_handle, std::string depth_handle, std::string matte_handle);
 
-		void GetIntrinsicTensor();
-		void GetExtrinsicTensor();
+		bool GetIntrinsicTensor(std::string path);
+		bool GetExtrinsicTensor(std::string path);
 
 		open3d::geometry::Image TransformDepth(open3d::geometry::Image* old_depth, open3d::geometry::Image* color);
 	public:
@@ -91,7 +102,10 @@ namespace MKV_Rendering {
 		/// <param name="extrinsics">: camera extrinsics</param>
 		/// <param name="camera_ID">: camera's ID</param>
 		/// <param name="FPS">: playback speed</param>
-		Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string> &extrinsics, int index, double FPS);
+		//Livescan_Data(std::string data_folder, std::string matte_folder, std::vector<std::string> &extrinsics, int index, double FPS);
+
+		Livescan_Data(std::string extrinsics_file, std::string intrinsics_file, std::string data_folder, int index, double FPS, 
+			std::string color_handle = "Color_", std::string depth_handle = "Depth_", std::string matte_handle = "Matte_");
 
 		//Destructor. Say goodbye! :(
 		~Livescan_Data();
@@ -102,6 +116,7 @@ namespace MKV_Rendering {
 		bool CycleCaptureForwards();
 		bool CycleCaptureBackwards();
 		bool SeekToTime(uint64_t time);
+		bool SeekToFrame(int frame);
 
 		std::shared_ptr<open3d::geometry::RGBDImage> GetFrameRGBD();
 
@@ -112,5 +127,7 @@ namespace MKV_Rendering {
 		void PackIntoOldVoxelGrid(open3d::geometry::VoxelGrid* grid);
 
 		void PackIntoNewVoxelGrid(MeshingVoxelGrid* grid);
+
+		void PackIntoPointCloud(open3d::geometry::PointCloud* cloud);
 	};
 }

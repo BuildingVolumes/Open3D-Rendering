@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EncodeDecodeManager.h"
 #include "CameraManager.h"
 
 using namespace::MKV_Rendering;
@@ -10,6 +11,8 @@ class NodeWrapper
 	//TODO: make a command line based system to allow us to efficiently perform any functionality implemented thus far
 
 	CameraManager *cm;
+
+	EncDec::EncodeDecodeManager* edm;
 
 	VoxelGridData* vgd;
 
@@ -36,7 +39,9 @@ protected:
 
 	int TextureOBJ(int startingLoc);
 
-	int LoadDataLivescan(int startingLoc, bool useMattes);
+	int LoadDataLivescan(int startingLoc);
+
+	int AddCameraLivescan(int startingLoc);
 
 	int LoadDataStructure(int startingLoc);
 
@@ -47,4 +52,12 @@ protected:
 	int EnableCamera(int startingLoc, bool enable);
 
 	int CleanupMeshPoisson(int startingLoc);
+
+	int EncodeMesh(int startingLoc);
+
+	int DecodeMesh(int startingLoc);
+
+	int MortonEncodeMesh(int startingLoc);
+
+	int MortonDecodeMesh(int startingLoc);
 };

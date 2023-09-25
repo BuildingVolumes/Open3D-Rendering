@@ -44,14 +44,19 @@ void NodeWrapper::WriteOBJ(std::string filename, std::string filepath, open3d::g
 	{
 		auto tri = mesh->triangles_[i];
 
-		writer << "f " <<
-			(tri.x() + 1) << "/" << (tri.x() + 1) << "/" << (tri.x() + 1) << " " <<
-			(tri.y() + 1) << "/" << (tri.y() + 1) << "/" << (tri.y() + 1) << " " <<
-			(tri.z() + 1) << "/" << (tri.z() + 1) << "/" << (tri.z() + 1);
-
-		if (i < mesh->triangles_.size() - 1)
+		if (mesh->triangle_uvs_.size() > 0)
 		{
-			writer << "\n";
+			writer << "f " <<
+				(tri.x() + 1) << "/" << (tri.x() + 1) << "/" << (tri.x() + 1) << " " <<
+				(tri.y() + 1) << "/" << (tri.y() + 1) << "/" << (tri.y() + 1) << " " <<
+				(tri.z() + 1) << "/" << (tri.z() + 1) << "/" << (tri.z() + 1) << "\n";
+		}
+		else
+		{
+			writer << "f " <<
+				(tri.x() + 1) << "//" << (tri.x() + 1) << " " <<
+				(tri.y() + 1) << "//" << (tri.y() + 1) << " " <<
+				(tri.z() + 1) << "//" << (tri.z() + 1) << "\n";
 		}
 	}
 
@@ -60,14 +65,18 @@ void NodeWrapper::WriteOBJ(std::string filename, std::string filepath, open3d::g
 
 NodeWrapper::NodeWrapper()
 {
-	cm = new CameraManager();
-
 	vgd = new VoxelGridData();
+
+	edm = new EncDec::EncodeDecodeManager();
+
+	cm = new CameraManager();
 }
 
 NodeWrapper::~NodeWrapper()
 {
 	delete cm;
+
+	delete edm;
 
 	delete vgd;
 }
@@ -80,14 +89,14 @@ void NodeWrapper::PrintHelp() {
 	DebugLine(">   --emptyTXT [string, name]");
 	DebugLine(">   Creates a TXT file");
 	DebugLine("");
-	DebugLine(">   --LoadCamerasLivescan [string, root folder] [float, playback speed]");
-	DebugLine(">   Loads data taken from a Livescan output folder");
+	DebugLine(">   --LoadCamerasLivescan");
+	DebugLine(">   Initializes a camera manager to take livescan cameras");
 	DebugLine("");
-	DebugLine(">   --LoadCamerasLivescanWithMattes [string, root folder] [float, playback speed]");
-	DebugLine(">   Loads data taken from a Livescan output folder that contains mattes");
-	DebugLine("");
-	DebugLine(">   --LoadCamerasStructure [string, root folder]");
-	DebugLine(">   Loads data where the details are specified by a .structure file");
+	DebugLine(">   --AddCamera [string, rootFolder] [string, intrinsicsFile] [string, extrinsicsFile] [string, colorTag] [string, depthTag] [string, matteTag]");
+	DebugLine(">   Adds a single camera's worth of data to the manager.");
+	DebugLine(">   Root folder encompasses all relevant files for the camera.");
+	DebugLine(">   Intrinsics/Extrinsics is the file name and path of the intrinsics/extrinsics file");
+	DebugLine(">   Tags indicate what keywords to look for when searching for color/depth/matte images");
 	DebugLine("");
 	DebugLine(">   --Unload");
 	DebugLine(">   Unloads data, must be called before calling any 'LoadCameras' command again");
@@ -107,11 +116,23 @@ void NodeWrapper::PrintHelp() {
 	DebugLine(">   >   --sdfTrunc [float] -> grid will not show changes that are less significant than this number (default 0.04f)");
 	DebugLine(">   >   --voxel_size [float] -> the size of a single voxel (default 0.005859375f)");
 	DebugLine("");
-	DebugLine(">   --MakeObj [ulong, time] [string, filename] [string, filepath]");
-	DebugLine(">   Extracts an OBJ mesh from the current data at the provided time, and saves it as filename in filepath");
+	DebugLine(">   --MakeObj [ulong, time] [string, filename]");
+	DebugLine(">   Extracts an OBJ mesh from the current data at the provided time, and saves it as filename");
 	DebugLine("");
-	DebugLine(">   --TextureObj [string, .obj file] [ulong, time] [string, filename] [string, filepath]");
-	DebugLine(">   Textures a pre-existing OBJ file according to present data, then save it as filename in filepath");
+	DebugLine(">   --TextureObj [string, .obj file] [ulong, time] [string, filename]");
+	DebugLine(">   Textures a pre-existing OBJ file according to present data, then save it as filename");
+	DebugLine("");
+	DebugLine(">   --EncodeOBJ [string, .obj file] [int, channels] [int, bytes per channel] [string, .png filename]");
+	DebugLine(">   Encodes an OBJ into a PNG file");
+	DebugLine("");
+	DebugLine(">   --DecodeOBJ [string, .png file] [string, .png filename]");
+	DebugLine(">   Extracts an OBJ from a PNG file that was encoded through the EncodeOBJ function");
+	DebugLine("");
+	DebugLine(">   --MortonEncodeOBJ [string, .obj file] [int, channels] [int, bytes per channel] [string, .png filename]");
+	DebugLine(">   Encodes an OBJ into a PNG file");
+	DebugLine("");
+	DebugLine(">   --MortonDecodeOBJ [string, .png file] [string, .png filename]");
+	DebugLine(">   Extracts an OBJ from a PNG file that was encoded through the MortonEncodeOBJ function");
 	DebugLine("");
 }
 
@@ -123,19 +144,6 @@ void NodeWrapper::PerformOperations(int maxSpecs, char** specs)
 	{
 		pseudoSpecs.push_back(specs[i]);
 	}
-
-	//pseudoSpecs.push_back("TestOpen3D");
-	//pseudoSpecs.push_back("--LoadCamerasLivescanWithMattes");
-	//pseudoSpecs.push_back("_TEST_DATA/hogue_160");
-	//pseudoSpecs.push_back("5.0");
-	//pseudoSpecs.push_back("--MakeObj");
-	//pseudoSpecs.push_back("0");
-	//pseudoSpecs.push_back("NodesOBJ");
-	//pseudoSpecs.push_back("TempFiles");
-	//
-	//maxSpecs = pseudoSpecs.size();
-
-	//"TestOpen3D --LoadCamerasLivescanWithMattes ..\..\TestOpen3D\_TEST_DATA\hogue_160 5.0 --MakeObj 0 NodesOBJ TempFiles"
 
 	specsLength = maxSpecs;
 
@@ -156,15 +164,7 @@ void NodeWrapper::PerformOperations(int maxSpecs, char** specs)
 
 			if (spec == "--LoadCamerasLivescan")
 			{
-				currentSpec += LoadDataLivescan(currentSpec, false);
-			}
-			else if (spec == "--LoadCamerasLivescanWithMattes")
-			{
-				currentSpec += LoadDataLivescan(currentSpec, true);
-			}
-			else if (spec == "--LoadCamerasStructure")
-			{
-				currentSpec += LoadDataStructure(currentSpec);
+				currentSpec += LoadDataLivescan(currentSpec);
 			}
 			else if (spec == "--Unload")
 			{
@@ -190,6 +190,10 @@ void NodeWrapper::PerformOperations(int maxSpecs, char** specs)
 			{
 				currentSpec += EnableCamera(currentSpec, false);
 			}
+			else if (spec == "--AddCamera")
+			{ 
+				currentSpec += AddCameraLivescan(currentSpec);
+			}
 			else if (spec == "--help")
 			{
 				PrintHelp();
@@ -197,6 +201,22 @@ void NodeWrapper::PerformOperations(int maxSpecs, char** specs)
 			else if (spec == "--emptyTXT")
 			{
 				currentSpec += MakeEmptyTXT(currentSpec);
+			}
+			else if (spec == "--EncodeOBJ")
+			{
+				currentSpec += EncodeMesh(currentSpec);
+			}
+			else if (spec == "--DecodeOBJ")
+			{
+				currentSpec += DecodeMesh(currentSpec);
+			}
+			else if (spec == "--MortonEncodeOBJ")
+			{
+				currentSpec += MortonEncodeMesh(currentSpec);
+			}
+			else if (spec == "--MortonDecodeOBJ")
+			{
+				currentSpec += MortonDecodeMesh(currentSpec);
 			}
 			else
 			{
@@ -208,6 +228,8 @@ void NodeWrapper::PerformOperations(int maxSpecs, char** specs)
 	{
 		WriteError(e, "ERRORS.txt");
 	}
+
+	//system("pause");
 }
 
 int NodeWrapper::MakeEmptyTXT(int currentSpec)
@@ -254,7 +276,7 @@ void NodeWrapper::DebugLine(std::string text)
 
 int NodeWrapper::MakeOBJ(int startingLoc)
 {
-	int argAmount = 3;
+	int argAmount = 2;
 
 	if (specsLength < startingLoc + argAmount)
 	{
@@ -265,14 +287,14 @@ int NodeWrapper::MakeOBJ(int startingLoc)
 
 	auto obj = cm->GetMeshAtTimestamp(vgd, std::stoull(pseudoSpecs[startingLoc])).ToLegacyTriangleMesh();
 
-	WriteOBJ(pseudoSpecs[startingLoc + 1] + ".obj", pseudoSpecs[startingLoc + 2], &obj);
+	open3d::io::WriteTriangleMeshToOBJ(pseudoSpecs[startingLoc + 1], obj, true, false, true, false, true, false);
 
 	return argAmount;
 }
 
 int NodeWrapper::TextureOBJ(int startingLoc)
 {
-	int argAmount = 4;
+	int argAmount = 3;
 
 	if (specsLength < startingLoc + argAmount)
 	{
@@ -288,23 +310,16 @@ int NodeWrapper::TextureOBJ(int startingLoc)
 	auto stitched_image = cm->CreateUVMapAndTextureAtTimestamp(&mesh, std::stoull(pseudoSpecs[startingLoc + 1]), false);
 
 	std::string filename = pseudoSpecs[startingLoc + 2];
-	std::string filepath = pseudoSpecs[startingLoc + 3];
 
-	if (filepath == "")
-	{
-		open3d::io::WriteImageToPNG(filename, *stitched_image);
-	}
-	else
-	{
-		open3d::io::WriteImageToPNG(filepath + "/" + filename, *stitched_image);
-	}
+	open3d::io::WriteImageToPNG(filename, *stitched_image);
+	open3d::io::WriteTriangleMeshToOBJ(pseudoSpecs[startingLoc], mesh, true, false, true, false, true, false);
 
 	return argAmount;
 }
 
-int NodeWrapper::LoadDataLivescan(int startingLoc, bool useMattes)
+int NodeWrapper::LoadDataLivescan(int startingLoc)
 {
-	int argAmount = 2;
+	int argAmount = 0;
 
 	if (specsLength < startingLoc + argAmount)
 	{
@@ -313,7 +328,32 @@ int NodeWrapper::LoadDataLivescan(int startingLoc, bool useMattes)
 		return argAmount;
 	}
 
-	cm->LoadTypeLivescan(pseudoSpecs[startingLoc], useMattes ? pseudoSpecs[startingLoc] : "", std::stof(pseudoSpecs[startingLoc + 1]));
+	cm->LoadTypeLivescan();
+
+	return argAmount;
+}
+
+int NodeWrapper::AddCameraLivescan(int startingLoc)
+{
+	int argAmount = 6;
+
+	if (specsLength < startingLoc + argAmount)
+	{
+		std::cout << "Invalid argument amount" << std::endl;
+
+		return argAmount;
+	}
+
+	std::string root_folder = pseudoSpecs[startingLoc];
+	
+	std::string intrinsics = pseudoSpecs[startingLoc + 1];
+	std::string extrinsics = pseudoSpecs[startingLoc + 2];
+
+	std::string color_handle = pseudoSpecs[startingLoc + 3];
+	std::string depth_handle = pseudoSpecs[startingLoc + 4];
+	std::string matte_handle = pseudoSpecs[startingLoc + 5];
+
+	cm->AddCameraLivescan(root_folder, intrinsics, extrinsics, color_handle, depth_handle, matte_handle, 5.0);
 
 	return argAmount;
 }
@@ -420,4 +460,84 @@ int NodeWrapper::EnableCamera(int startingLoc, bool enable)
 int NodeWrapper::CleanupMeshPoisson(int startingLoc)
 {
 	return 0;
+}
+
+int NodeWrapper::EncodeMesh(int startingLoc)
+{
+	int argAmount = 4;
+
+	std::string obj_file = pseudoSpecs[startingLoc];
+	
+	int image_channels = std::stoi(pseudoSpecs[startingLoc + 1]);
+	int bytes_per_channel = std::stoi(pseudoSpecs[startingLoc + 2]);
+
+	std::string output_file_name = pseudoSpecs[startingLoc + 3];
+
+	auto mesh = std::make_shared<open3d::geometry::TriangleMesh>();
+
+	open3d::io::ReadTriangleMesh(obj_file, *mesh);
+
+	auto image = edm->DefaultEncodeOBJ(mesh, image_channels, bytes_per_channel);
+
+	open3d::io::WriteImageToPNG(output_file_name, *image);
+
+	return argAmount;
+}
+
+int NodeWrapper::DecodeMesh(int startingLoc)
+{
+	int argAmount = 2;
+
+	std::string png_file = pseudoSpecs[startingLoc];
+	std::string output_file_name = pseudoSpecs[startingLoc + 1];
+
+	auto image = std::make_shared<open3d::geometry::Image>();
+
+	open3d::io::ReadImageFromPNG(png_file, *image);
+
+	auto mesh = edm->DefaultDecodeOBJ(image);
+
+	WriteOBJ(output_file_name, "", &(*mesh));
+
+	return argAmount;
+}
+
+int NodeWrapper::MortonEncodeMesh(int startingLoc)
+{
+	int argAmount = 4;
+
+	std::string obj_file = pseudoSpecs[startingLoc];
+
+	int image_channels = std::stoi(pseudoSpecs[startingLoc + 1]);
+	int bytes_per_channel = std::stoi(pseudoSpecs[startingLoc + 2]);
+
+	std::string output_file_name = pseudoSpecs[startingLoc + 3];
+
+	auto mesh = std::make_shared<open3d::geometry::TriangleMesh>();
+
+	open3d::io::ReadTriangleMesh(pseudoSpecs[startingLoc], *mesh);
+
+	auto image = edm->MortonEncodeOBJ(mesh, image_channels, bytes_per_channel);
+
+	open3d::io::WriteImageToPNG(output_file_name, *image);
+
+	return argAmount;
+}
+
+int NodeWrapper::MortonDecodeMesh(int startingLoc)
+{
+	int argAmount = 2;
+
+	std::string png_file = pseudoSpecs[startingLoc];
+	std::string output_file_name = pseudoSpecs[startingLoc + 1];
+
+	auto image = std::make_shared<open3d::geometry::Image>();
+
+	open3d::io::ReadImageFromPNG(png_file, *image);
+
+	auto mesh = edm->MortonDecodeOBJ(image);
+
+	WriteOBJ(output_file_name, "", &(*mesh));
+
+	return argAmount;
 }

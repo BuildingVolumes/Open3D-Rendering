@@ -2,7 +2,7 @@
 #include "AdditionalUtilities.h"
 #include "ErrorLogger.h"
 
-#include "MKV_Data.h"
+//#include "MKV_Data.h"
 #include "Image_Data.h"
 #include "Livescan_Data.h"
 #include "TextureUnpacker.h"
@@ -48,7 +48,7 @@ void MKV_Rendering::CameraManager::LoadStructure(std::string structure_path, std
 	for (auto line : lines)
 	{
 		std::vector<std::string> name_and_value;
-		SplitString(line, name_and_value, ' ');
+		SplitString(line, name_and_value, "_");
 		(*data)[name_and_value[0]] = name_and_value[1];
 	}
 
@@ -91,14 +91,14 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 
 		if (c_type == "mkv")
 		{
-			camera_data.push_back(new MKV_Data(
-				_folder,
-				camera_structure["MKV_File"],
-				camera_structure["Calibration_File"],
-				index
-			));
-
-			camera_enabled.push_back(true);
+			//camera_data.push_back(new MKV_Data(
+			//	_folder,
+			//	camera_structure["MKV_File"],
+			//	camera_structure["Calibration_File"],
+			//	index
+			//));
+			//
+			//camera_enabled.push_back(true);
 		}
 		else if (c_type == "image")
 		{
@@ -140,7 +140,7 @@ bool MKV_Rendering::CameraManager::LoadTypeStructure(std::string root_folder, st
 	return true;
 }
 
-bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string image_root_folder, std::string matte_root_folder, float FPS)
+bool MKV_Rendering::CameraManager::LoadTypeLivescan()
 {
 	if (loaded)
 	{
@@ -148,101 +148,121 @@ bool MKV_Rendering::CameraManager::LoadTypeLivescan(std::string image_root_folde
 		return false;
 	}
 
-	std::vector<std::string> extrinsic_file_candidates;
-	std::string extrinsic_file = "";
-
-	open3d::utility::filesystem::ListFilesInDirectory(image_root_folder, extrinsic_file_candidates);
-
-	std::cout << image_root_folder << std::endl;
-
-	for (int i = 0; i < extrinsic_file_candidates.size(); ++i)
-	{
-		std::vector<std::string> file_name_and_ext;
-
-		SplitString(extrinsic_file_candidates[i], file_name_and_ext, '.');
-
-		std::cout << extrinsic_file_candidates[i] << std::endl;
-
-		if (file_name_and_ext.back() == "log")
-		{
-			extrinsic_file = extrinsic_file_candidates[i];
-			break;
-		}
-	}
-
-	if (extrinsic_file == "")
-	{
-		E_LOG("No extrinsics file detected!", false);
-
-		return false;
-	}
-
-	std::vector<std::string> all_folders = GetDirectories(image_root_folder);
-	std::vector<std::string> matte_folders;
-
-	if (matte_root_folder != "")
-	{
-		std::cout << "Matte found: " << matte_root_folder << std::endl;
-		matte_folders = GetDirectories(matte_root_folder);
-	}
-
-	std::fstream extrinsics_filestream;
-	extrinsics_filestream.open(extrinsic_file);
-	std::vector<std::string> lines;
-
-	std::map<std::string, std::string> camera_structure;
-
-	for (int i = 0; i < all_folders.size(); ++i)
-	{
-		std::string parser = "";
-
-		auto _folder = all_folders[i];
-
-		std::cout << _folder << std::endl;
-
-		std::vector<std::string> extrinsics_string;
-
-		if (!std::getline(extrinsics_filestream, parser))
-		{
-			break;
-		}
-		else if (parser == "")
-		{
-			break;
-		}
-
-		for (int i = 0; i < 4; ++i)
-		{
-			std::getline(extrinsics_filestream, parser);
-			extrinsics_string.push_back(parser);
-		}
-
-		std::string _matte = "";
-
-		if (matte_root_folder != "")
-		{
-			_matte = matte_folders[i];
-		}
-
-		camera_data.push_back(new Livescan_Data(
-			_folder, _matte,
-			extrinsics_string,
-			i, FPS
-		));
-
-		camera_enabled.push_back(true);
-	}
-
-	if (camera_data.size() == 0)
-	{
-		ErrorLogger::LOG_ERROR(
-			"No data files present!"
-		);
-
-		return false;
-	}
+	//std::vector<std::string> extrinsic_file_candidates;
+	//std::string extrinsic_file = "";
+	//
+	//open3d::utility::filesystem::ListFilesInDirectory(image_root_folder, extrinsic_file_candidates);
+	//
+	//std::cout << image_root_folder << std::endl;
+	//
+	//for (int i = 0; i < extrinsic_file_candidates.size(); ++i)
+	//{
+	//	std::vector<std::string> file_name_and_ext;
+	//
+	//	SplitString(extrinsic_file_candidates[i], file_name_and_ext, ".");
+	//
+	//	std::cout << extrinsic_file_candidates[i] << std::endl;
+	//
+	//	if (file_name_and_ext.back() == "log")
+	//	{
+	//		extrinsic_file = extrinsic_file_candidates[i];
+	//		break;
+	//	}
+	//}
+	//
+	//if (extrinsic_file == "")
+	//{
+	//	E_LOG("No extrinsics file detected!", false);
+	//
+	//	return false;
+	//}
+	//
+	//std::vector<std::string> all_folders = GetDirectories(image_root_folder);
+	//std::vector<std::string> matte_folders;
+	//
+	//if (matte_root_folder != "")
+	//{
+	//	std::cout << "Matte found: " << matte_root_folder << std::endl;
+	//	matte_folders = GetDirectories(matte_root_folder);
+	//}
+	//
+	//std::fstream extrinsics_filestream;
+	//extrinsics_filestream.open(extrinsic_file);
+	//std::vector<std::string> lines;
+	//
+	//std::map<std::string, std::string> camera_structure;
+	//
+	//for (int i = 0; i < all_folders.size(); ++i)
+	//{
+	//	std::string parser = "";
+	//
+	//	auto _folder = all_folders[i];
+	//
+	//	std::cout << _folder << std::endl;
+	//
+	//	std::vector<std::string> extrinsics_string;
+	//
+	//	if (!std::getline(extrinsics_filestream, parser))
+	//	{
+	//		break;
+	//	}
+	//	else if (parser == "")
+	//	{
+	//		break;
+	//	}
+	//
+	//	for (int i = 0; i < 4; ++i)
+	//	{
+	//		std::getline(extrinsics_filestream, parser);
+	//		extrinsics_string.push_back(parser);
+	//	}
+	//
+	//	std::string _matte = "";
+	//
+	//	if (matte_root_folder != "")
+	//	{
+	//		_matte = matte_folders[i];
+	//	}
+	//
+	//	camera_data.push_back(new Livescan_Data(
+	//		_folder, _matte,
+	//		extrinsics_string,
+	//		i, FPS
+	//	));
+	//
+	//	camera_enabled.push_back(true);
+	//}
+	//
+	//if (camera_data.size() == 0)
+	//{
+	//	ErrorLogger::LOG_ERROR(
+	//		"No data files present!"
+	//	);
+	//
+	//	return false;
+	//}
 
 	loaded = true;
+
+	return true;
+}
+
+bool MKV_Rendering::CameraManager::AddCameraLivescan(std::string root_folder, std::string intrinsics_file, std::string extrinsics_file, 
+	std::string color_handle, std::string depth_handle, std::string matte_handle, float FPS)
+{
+	std::cout << "Adding camera " << camera_data.size() << std::endl;
+
+	auto livescan_camera = new Livescan_Data(extrinsics_file, intrinsics_file, root_folder, camera_data.size(), FPS, color_handle, depth_handle, matte_handle);
+
+	if (!livescan_camera->IsOK())
+	{
+		std::cout << ">>> Bad Camera! <<<" << std::endl;
+
+		return false;
+	}
+
+	camera_data.push_back(livescan_camera);
+	camera_enabled.push_back(true);
 
 	return true;
 }
@@ -285,9 +305,86 @@ open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMesh(VoxelGri
 	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGrid, data).ExtractSurfaceMesh(0.0f);
 }
 
-std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGrid(int maximum_artifact_size)
+std::shared_ptr<MeshingVoxelGrid> MKV_Rendering::CameraManager::GetNewVoxelGrid(MeshingVoxelParams params)
 {
-	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>(0.005, 201, 401, 201, Eigen::Vector3d(0, 0, 0));
+	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>(params);
+
+	for (auto cam : camera_data)
+	{
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
+		}
+	}
+
+	return mvg;
+}
+
+void MKV_Rendering::CameraManager::PackNewVoxelGrid(MeshingVoxelGrid* mvg)
+{
+	for (auto cam : camera_data)
+	{
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, mvg);
+		}
+	}
+}
+
+void MKV_Rendering::CameraManager::PackNewVoxelGridAtTimestamp(MeshingVoxelGrid* mvg, uint64_t timestamp)
+{
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	PackNewVoxelGrid(mvg);
+}
+
+std::shared_ptr<MeshingVoxelGrid> MKV_Rendering::CameraManager::GetNewVoxelGridAtTimestamp(MeshingVoxelParams params, uint64_t timestamp)
+{
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	return GetNewVoxelGrid(params);
+}
+
+std::shared_ptr<open3d::geometry::PointCloud> MKV_Rendering::CameraManager::GetPointCloud()
+{
+	std::shared_ptr<open3d::geometry::PointCloud> cloud = std::make_shared<open3d::geometry::PointCloud>();
+
+	for (auto cam : camera_data)
+	{
+		int index = cam->GetIndex();
+
+		if (index > 0 && camera_enabled[index])
+		{
+			ErrorLogger::EXECUTE("Pack Frame into Point Cloud", cam, &Abstract_Data::PackIntoPointCloud, &(*cloud));
+		}
+	}
+
+	return cloud;
+}
+
+std::shared_ptr<open3d::geometry::PointCloud> MKV_Rendering::CameraManager::GetPointCloudAtTimestamp(uint64_t timestamp)
+{
+	for (auto cam : camera_data)
+	{
+		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
+	}
+
+	return GetPointCloud();
+}
+
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGrid(MeshingVoxelParams params, int maximum_artifact_size)
+{
+	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>(params);
 
 	for (auto cam : camera_data)
 	{
@@ -304,14 +401,14 @@ std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::Ge
 	return mvg->ExtractMesh();
 }
 
-std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGridAtTimestamp(int maximum_artifact_size, uint64_t timestamp)
+std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::GetMeshUsingNewVoxelGridAtTimestamp(MeshingVoxelParams params, int maximum_artifact_size, uint64_t timestamp)
 {
 	for (auto cam : camera_data)
 	{
 		ErrorLogger::EXECUTE("Find Frame At Time " + std::to_string(timestamp), cam, &Abstract_Data::SeekToTime, timestamp);
 	}
 
-	return GetMeshUsingNewVoxelGrid(maximum_artifact_size);
+	return GetMeshUsingNewVoxelGrid(params, maximum_artifact_size);
 }
 
 open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelGridData *data)
@@ -349,6 +446,8 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGrid(Vo
 		16, data->blocks, device
 	);
 
+	std::cout << "Constructing Voxel Grid..." << std::endl;
+
 	for (auto cam : camera_data)
 	{
 		int index = cam->GetIndex();
@@ -385,7 +484,9 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		std::cout << cam->GetIndex() << std::endl;
+
+		if (index >= 0 && camera_enabled[index])
 		{
 			auto rgbd_im = ErrorLogger::EXECUTE("Get RGBD Image for Texture Stitching", cam, &Abstract_Data::GetFrameRGBD);
 
@@ -393,7 +494,6 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 			depth_images[index] = *(rgbd_im->depth_.ConvertDepthToFloatImage());
 		}
 	}
-
 
 	//Save data about the cameras for future use, and allocate triangle vectors
 
@@ -421,7 +521,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		{
 			auto mat = camera_data[i]->GetExtrinsicMat();
 
-			mesh->textures_.push_back(color_images[i]);
+			//mesh->textures_.push_back(color_images[i]);
 
 			camera_triangles[i] = std::vector<int>();
 			camera_positions_original[i] = mat.block<3, 1>(0, 3);
@@ -526,10 +626,10 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		{
 			//Record which camera 'owns' this triangle
 			//int best_camera = i;
-			int best_camera = 1;
+			//int best_camera = 1;
 
-			camera_triangles[best_camera].push_back(best_camera);
-			mesh->triangle_material_ids_[best_camera] = best_camera;
+			camera_triangles[best_camera].push_back(i);
+			mesh->triangle_material_ids_[i] = best_camera;
 		}
 	}
 
@@ -538,7 +638,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	if (withoutUV > 0)
 	{
 		std::cout << "WARNING: There were triangles without UVs. Press any key to continue anyways." << std::endl;
-		system("pause");
+		//system("pause");
 	}
 
 	//Not ultimately necessary, but it's nice to be certain
@@ -580,8 +680,12 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 
 						index_claims.push_back(i);
 						mesh->vertices_.push_back(mesh->vertices_[triangle(j)]);
-						mesh->vertex_normals_.push_back(mesh->vertex_normals_[triangle(j)]);
-						mesh->vertex_colors_.push_back(mesh->vertex_colors_[triangle(j)]);
+
+						if (mesh->vertex_normals_.size() > 0)
+							mesh->vertex_normals_.push_back(mesh->vertex_normals_[triangle(j)]);
+						if (mesh->vertex_colors_.size() > 0)
+							mesh->vertex_colors_.push_back(mesh->vertex_colors_[triangle(j)]);
+
 						mesh->triangle_uvs_.push_back(mesh->triangle_uvs_[triangle(j)]);
 					}
 
@@ -595,8 +699,10 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 					Eigen::Vector3d uvz = camera_intrinsics[i] *
 						(camera_rotations[i] * mesh->vertices_[vert_loc] + camera_positions_original[i]);
 
-					uvz.x() /= (uvz.z() * (double)color_images[i].width_);
-					uvz.y() /= (uvz.z() * (double)color_images[i].height_);
+					uvz /= uvz.z();
+
+					uvz.x() /= (double)color_images[i].width_;
+					uvz.y() /= (double)color_images[i].height_;
 
 					if (useTheBadTexturingMethod)
 					{
@@ -605,6 +711,8 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 					}
 
 					uvz.y() = 1.0 - uvz.y();
+
+					//std::cout << triangle_index << ": " << uvz.x() << ", " << uvz.y() << std::endl;
 
 					//uvz.x() /= uvz.z();
 					//uvz.y() /= uvz.z();
@@ -615,24 +723,33 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		}
 	}
 
+	auto to_return = std::make_shared<open3d::geometry::Image>();
+
 	if (!useTheBadTexturingMethod)
 	{
 		TextureUnpacker tu;
 
-		auto better_texture = std::make_shared<open3d::geometry::Image>();
-		better_texture->width_ = 1920; // color_images[0].width_;
-		better_texture->height_ = 1080; // color_images[0].height_;
-		better_texture->bytes_per_channel_ = color_images[0].bytes_per_channel_;
-		better_texture->num_of_channels_ = color_images[0].num_of_channels_;
-		better_texture->data_.resize(better_texture->width_ * better_texture->height_ * better_texture->num_of_channels_ * better_texture->bytes_per_channel_);
+		//auto better_texture = std::make_shared<open3d::geometry::Image>();
+		to_return->width_ = 1920; // color_images[0].width_;
+		to_return->height_ = 1080; // color_images[0].height_;
+		to_return->bytes_per_channel_ = color_images[0].bytes_per_channel_;
+		to_return->num_of_channels_ = color_images[0].num_of_channels_;
+		to_return->data_.resize(to_return->width_ * to_return->height_ * to_return->num_of_channels_ * to_return->bytes_per_channel_);
 
-		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &color_images, mesh, &(*better_texture), false);
+		std::cout << color_images.size() << std::endl;
 
-		return better_texture;
+		for (int i = 0; i < color_images.size(); ++i)
+		{
+			std::cout << color_images[i].width_ << ", " << color_images[i].height_ << std::endl;
+		}
+
+		ErrorLogger::EXECUTE("Perform UV packing", &tu, &TextureUnpacker::PerformTextureUnpack, &color_images, mesh, &(*to_return), false);
+
+		//return better_texture;
 	}
 	else
 	{
-		auto to_return = std::make_shared<open3d::geometry::Image>(open3d::geometry::Image());
+		//auto to_return = std::make_shared<open3d::geometry::Image>();
 
 		//Combine all the image data into one
 		for (int i = 0; i < color_images.size(); ++i)
@@ -645,8 +762,12 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		to_return->bytes_per_channel_ = color_images[0].bytes_per_channel_;
 		to_return->num_of_channels_ = color_images[0].num_of_channels_;
 
-		return to_return;
+		//return to_return;
 	}
+
+	mesh->triangle_material_ids_.clear();
+
+	return to_return;
 }
 
 std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVMapAndTextureAtTimestamp(open3d::geometry::TriangleMesh* mesh, uint64_t timestamp, bool useTheBadTexturingMethod)//, float depth_epsilon)
@@ -695,6 +816,31 @@ bool MKV_Rendering::CameraManager::AllCamerasSeekTimestamp(uint64_t timestamp)
 	return success;
 }
 
+bool MKV_Rendering::CameraManager::AllCamerasSeekFrame(int frame)
+{
+	bool success = true;
+
+	for (auto cam : camera_data)
+	{
+		success = success && ErrorLogger::EXECUTE("Camera Seek Frame", cam, &Abstract_Data::SeekToFrame, frame);
+	}
+
+	return success;
+}
+
+int MKV_Rendering::CameraManager::GetPlayableFrameCount()
+{
+	int max_frames = MAXINT32;
+
+	for (auto cam : camera_data)
+	{
+		int cam_max = ErrorLogger::EXECUTE("Frame Limit", cam, &Abstract_Data::GetFrameCount);
+		max_frames = (max_frames < cam_max) ? max_frames : cam_max;
+	}
+
+	return max_frames;
+}
+
 open3d::t::geometry::TriangleMesh MKV_Rendering::CameraManager::GetMeshAtTimestamp(VoxelGridData* data, uint64_t timestamp)
 {
 	return ErrorLogger::EXECUTE("Construct Voxel Grid", this, &MKV_Rendering::CameraManager::GetVoxelGridAtTimestamp, data, timestamp).ExtractSurfaceMesh(0.0f);
@@ -722,7 +868,7 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGridAtT
 
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
 		}
@@ -741,7 +887,7 @@ std::vector<open3d::geometry::RGBDImage> MKV_Rendering::CameraManager::ExtractIm
 
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			to_return.push_back(*ErrorLogger::EXECUTE("Extract RGBD Image Vector", cam, &Abstract_Data::GetFrameRGBD));
 		}

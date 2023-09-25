@@ -47,8 +47,8 @@ void MKV_Rendering::Image_Data::LoadImages()
             {
                 std::vector<std::string> split_file;
                 std::vector<std::string> split_extension;
-                SplitString(color_files[i], split_file, '_');
-                SplitString(split_file.back(), split_extension, '.');
+                SplitString(color_files[i], split_file, "_");
+                SplitString(split_file.back(), split_extension, ".");
 
                 auto timestamp = std::stoull(split_extension[0]);
                 color_timestamps[timestamp] = color_files[i];
@@ -122,7 +122,7 @@ void MKV_Rendering::Image_Data::GetExtrinsicTensor()
     Eigen::Matrix3d r_mat_3 = Eigen::Matrix3d::Identity();
 
     std::vector<std::string> extrinsic_data;
-    SplitString(file_contents, extrinsic_data, ' ');
+    SplitString(file_contents, extrinsic_data, " ");
 
     for (int j = 0; j < 3; ++j)
     {
@@ -318,6 +318,11 @@ bool MKV_Rendering::Image_Data::SeekToTime(uint64_t time)
     std::cout << "Frame is at " << _timestamp << "\n" << std::endl;
 
     return true;
+}
+
+bool MKV_Rendering::Image_Data::SeekToFrame(int frame)
+{
+    return false;
 }
 
 std::shared_ptr<open3d::geometry::RGBDImage> MKV_Rendering::Image_Data::GetFrameRGBD()

@@ -63,7 +63,12 @@ namespace MKV_Rendering {
 		/// <param name="matte_root_folder">: folder containing matte images</param>
 		/// <param name="FPS">: playback speed of camera</param>
 		/// <returns>Successfully(?) loaded the files</returns>
-		bool LoadTypeLivescan(std::string image_root_folder, std::string matte_root_folder, float FPS);
+		bool LoadTypeLivescan();
+
+		bool IsLoaded() { return loaded; }
+
+		bool AddCameraLivescan(std::string root_folder, std::string intrinsics_file, std::string extrinsics_file,
+			std::string color_handle, std::string depth_handle, std::string matte_handle, float FPS);
 
 		//Default destructor, say goodbye :(
 		~CameraManager();
@@ -81,20 +86,34 @@ namespace MKV_Rendering {
 		/// <returns>A mesh</returns>
 		open3d::t::geometry::TriangleMesh GetMesh(VoxelGridData* data);
 
+		std::shared_ptr<MeshingVoxelGrid> GetNewVoxelGrid(MeshingVoxelParams params);
+
+		void PackNewVoxelGrid(MeshingVoxelGrid* mvg);
+
+		void PackNewVoxelGridAtTimestamp(MeshingVoxelGrid* mvg, uint64_t timestamp);
+
+		std::shared_ptr<MeshingVoxelGrid> GetNewVoxelGridAtTimestamp(MeshingVoxelParams params, uint64_t timestamp);
+
+		std::shared_ptr<open3d::geometry::PointCloud> GetPointCloud();
+
+		std::shared_ptr<open3d::geometry::PointCloud> GetPointCloudAtTimestamp(uint64_t timestamp);
+
 		/// <summary>
 		/// Gets a single mesh from our new voxel grid
 		/// </summary>
+		/// <param name="params">: grid parameters</param>
 		/// <param name="maximum_artifact_size">: max culling size for artifacts</param>
 		/// <returns>A pointer to a mesh</returns>
-		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGrid(int maximum_artifact_size);
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGrid(MeshingVoxelParams params, int maximum_artifact_size);
 
 		/// <summary>
 		/// Gets a single mesh at a specific timestamp from our new voxel grid
 		/// </summary>
+		/// <param name="params">: grid parameters</param>
 		/// <param name="maximum_artifact_size">: max culling size for artifacts</param>
 		/// <param name="timestamp">: time in playback</param>
 		/// <returns>A pointer to a mesh</returns>
-		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGridAtTimestamp(int maximum_artifact_size, uint64_t timestamp);
+		std::shared_ptr<open3d::geometry::TriangleMesh> GetMeshUsingNewVoxelGridAtTimestamp(MeshingVoxelParams params, int maximum_artifact_size, uint64_t timestamp);
 
 		/// <summary>
 		/// Gets an old Open3D voxel grid
@@ -145,6 +164,10 @@ namespace MKV_Rendering {
 		/// <param name="timestamp">: time in playback</param>
 		/// <returns>Successfully(?) set</returns>
 		bool AllCamerasSeekTimestamp(uint64_t timestamp);
+
+		bool AllCamerasSeekFrame(int frame);
+
+		int GetPlayableFrameCount();
 
 		/// <summary>
 		/// Gets a single mesh at a specific timestamp from the Open3D voxel grid

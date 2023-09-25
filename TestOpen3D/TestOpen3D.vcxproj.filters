@@ -8,20 +8,24 @@
     <ClCompile Include="Image_Data.cpp" />
     <ClCompile Include="KinectRenderer.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="MKV_Data.cpp" />
     <ClCompile Include="TextureUnpacker.cpp" />
     <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="MeshingVoxelGrid.cpp" />
     <ClCompile Include="NodeWrapper.cpp" />
+    <ClCompile Include="EncodeDecodeManager.cpp" />
+    <ClCompile Include="STB_Image_Wrapper.cpp" />
+    <ClCompile Include="TestFFT.cpp" />
+    <ClCompile Include="AlembicExportSuite.cpp" />
+    <ClCompile Include="PointCloudSuite.cpp" />
+    <ClCompile Include="TestZIP.cpp" />
+    <ClCompile Include="TestMultiMesh.cpp" />
+    <ClCompile Include="VolumeSequence.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="KinectRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MKV_Data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ErrorLogger.cpp">
@@ -52,11 +56,20 @@
     <ClInclude Include="ErrorLogger.h" />
     <ClInclude Include="Image_Data.h" />
     <ClInclude Include="Livescan_Data.h" />
-    <ClInclude Include="MKV_Data.h" />
     <ClInclude Include="TextureUnpacker.h" />
     <ClInclude Include="VoxelGridData.h" />
     <ClInclude Include="MeshingVoxelGrid.h" />
     <ClInclude Include="NodeWrapper.h" />
     <ClInclude Include="AbstractCommand.h" />
+    <ClInclude Include="EncodeDecodeManager.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="STB_Image_Wrapper.h" />
+    <ClInclude Include="TestSuite.h" />
+    <ClInclude Include="TestFFT.h" />
+    <ClInclude Include="AlembicExportSuite.h" />
+    <ClInclude Include="PointCloudSuite.h" />
+    <ClInclude Include="TestZIP.h" />
+    <ClInclude Include="TestMultiMesh.h" />
+    <ClInclude Include="VolumeSequence.h" />
   </ItemGroup>
 </Project>

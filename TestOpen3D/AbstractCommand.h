@@ -1,5 +1,7 @@
 #pragma once
 #include <string>
+#include <vector>
+#include <iostream>
 
 class AbstractCommand
 {
@@ -12,5 +14,21 @@ public:
 	std::string GetDesc() { return desc; }
 	std::string GetName() { return name; }
 
-	virtual int ExecuteCommand(char** specs, int currentSpec, int maxSpecs) = 0;
+	int ExecuteCommand(std::vector<std::string> &specs, int currentSpec, int maxSpecs) {
+		int argAmount = ArgumentAmount();
+
+		if (maxSpecs < currentSpec + argAmount)
+		{
+			std::cout << "Invalid argument amount" << std::endl;
+
+			return argAmount;
+		}
+
+		return ExecuteCommandProtected(specs, currentSpec, maxSpecs);
+	}
+
+protected:
+	virtual int ExecuteCommandProtected(std::vector<std::string>& specs, int currentSpec, int maxSpecs) = 0;
+
+	virtual int ArgumentAmount() = 0;
 };

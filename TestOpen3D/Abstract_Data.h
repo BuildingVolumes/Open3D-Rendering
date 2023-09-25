@@ -64,6 +64,9 @@ namespace MKV_Rendering {
 		/// </summary>
 		int index = -1;
 
+		int frame_count = 0;
+
+		bool cameraOK = false;
 	public:
 		/// <summary>
 		/// Constructor. Say hi! :D
@@ -95,6 +98,12 @@ namespace MKV_Rendering {
 		/// <param name="time">: Time to jump to</param>
 		/// <returns>Successfully(?) jumped</returns>
 		virtual bool SeekToTime(uint64_t time) = 0;
+
+		virtual bool SeekToFrame(int frame) = 0;
+
+		int GetFrameCount() {
+			return frame_count;
+		}
 
 		/// <summary>
 		/// Gets a single RGBD image from the livescan data
@@ -130,6 +139,11 @@ namespace MKV_Rendering {
 
 		}
 
+		virtual void PackIntoPointCloud(open3d::geometry::PointCloud* cloud)
+		{
+
+		}
+
 		open3d::core::Tensor GetIntrinsic();
 		open3d::core::Tensor GetExtrinsic();
 
@@ -143,6 +157,8 @@ namespace MKV_Rendering {
 		int GetImageWidth() { return imageWidth; }
 
 		int GetIndex() { return index; }
+
+		bool IsOK() { return cameraOK; }
 
 		/// <summary>
 		/// All-purpose tool to debug Open3D objects to the screen
@@ -161,5 +177,6 @@ namespace MKV_Rendering {
 
 			open3d::visualization::DrawGeometries(to_draw);
 		}
+
 	};
 }
