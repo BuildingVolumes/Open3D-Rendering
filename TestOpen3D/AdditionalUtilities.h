@@ -4,6 +4,7 @@
 
 #include "STB_Image_Wrapper.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -65,6 +66,30 @@ inline std::vector<std::string> GetFiles(const std::string& s)
     return r;
 }
 
+inline std::vector<std::string> GetFilesWithTag(const std::string& s, const std::string& tag)
+{
+    std::vector<std::string> r;
+    for (auto& p : std::filesystem::directory_iterator(s))
+        if (p.is_regular_file())
+            if (p.path().string().rfind(tag) != std::string::npos)
+                r.push_back(p.path().string());
+    return r;
+}
+
+inline std::vector<std::string> GetFilesWithTags(const std::string& s, const std::vector<std::string>& tags)
+{
+    std::vector<std::string> r;
+    for (auto& p : std::filesystem::directory_iterator(s))
+        if (p.is_regular_file())
+            for (auto& t : tags)
+                if (p.path().string().rfind(t) != std::string::npos)
+                {
+                    r.push_back(p.path().string());
+                    break;
+                }
+    return r;
+}
+
 inline void DebugVector(std::vector<std::string>& vec)
 {
     for (int i = 0; i < vec.size(); ++i)
@@ -113,4 +138,29 @@ inline std::string RemoveFileExtention(std::string filename)
     }
     
     return filename.substr(0, loc);
+}
+
+inline std::string StringLowerCase(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(),
+        // static_cast<int(*)(int)>(std::tolower)         // wrong
+        // [](int c){ return std::tolower(c); }           // wrong
+        // [](char c){ return std::tolower(c); }          // wrong
+        [](unsigned char c) { return std::tolower(c); } // correct
+    );
+    return s;
+}
+
+template<typename T>
+inline void WriteBytes(std::ofstream& savefile, T data, int *total_bytes)
+{
+    savefile.write(reinterpret_cast<char*>(&data), sizeof(T));
+    *total_bytes += sizeof(T);
+}
+
+template<typename T>
+inline void WriteByteArray(std::ofstream& savefile, T data, size_t array_byte_count, int* total_bytes)
+{
+    savefile.write(reinterpret_cast<char*>(data), array_byte_count);
+    *total_bytes += array_byte_count;
 }

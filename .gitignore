@@ -4,6 +4,8 @@
 *.ply
 x64/
 TestOpen3D/_TEST_DATA
+TestOpen3D/_AUXILIARY_TEST_DATA
+TestOpen3D/_MeshDump
 *.abc
 *.vgff
 *.vgzf

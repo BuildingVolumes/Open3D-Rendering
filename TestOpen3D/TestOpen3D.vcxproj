@@ -23,26 +23,26 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{aa97740a-4763-485d-80d7-50a3a50affb4}</ProjectGuid>
     <RootNamespace>TestOpen3D</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
@@ -173,18 +173,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AbstractSequence.cpp" />
     <ClCompile Include="Abstract_Data.cpp" />
     <ClCompile Include="AlembicExportSuite.cpp" />
     <ClCompile Include="AlembicWriter.cpp" />
     <ClCompile Include="CameraManager.cpp" />
+    <ClCompile Include="CGAL_MeshInterop.cpp" />
+    <ClCompile Include="CGAL_TestSuite.cpp" />
+    <ClCompile Include="DataMarshalling.cpp" />
+    <ClCompile Include="DracoEXE_TestSuite.cpp" />
+    <ClCompile Include="DracoWrapper.cpp" />
     <ClCompile Include="EncodeDecodeManager.cpp" />
     <ClCompile Include="ErrorLogger.cpp" />
     <ClCompile Include="Image_Data.cpp" />
     <ClCompile Include="KinectRenderer.cpp" />
     <ClCompile Include="Livescan_Data.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MeshDecimator.cpp" />
     <ClCompile Include="NodeWrapper.cpp" />
     <ClCompile Include="PointCloudSuite.cpp" />
+    <ClCompile Include="SingleMeshSuite.cpp" />
     <ClCompile Include="STB_Image_Wrapper.cpp" />
     <ClCompile Include="TestFFT.cpp" />
     <ClCompile Include="TestMultiMesh.cpp" />
@@ -192,21 +200,31 @@
     <ClCompile Include="TextureUnpacker.cpp" />
     <ClCompile Include="MeshingVoxelGrid.cpp" />
     <ClCompile Include="VolumeSequence.cpp" />
+    <ClCompile Include="VV_Mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AbstractCommand.h" />
+    <ClInclude Include="AbstractSequence.h" />
     <ClInclude Include="Abstract_Data.h" />
     <ClInclude Include="AdditionalUtilities.h" />
     <ClInclude Include="AlembicExportSuite.h" />
     <ClInclude Include="AlembicWriter.h" />
     <ClInclude Include="CameraManager.h" />
+    <ClInclude Include="CGAL_MeshInterop.h" />
+    <ClInclude Include="CGAL_TestSuite.h" />
     <ClInclude Include="ColorMapOptimizer.h" />
+    <ClInclude Include="DataMarshalling.h" />
+    <ClInclude Include="DracoEXE_TestSuite.h" />
+    <ClInclude Include="DracoWrapper.h" />
     <ClInclude Include="EncodeDecodeManager.h" />
     <ClInclude Include="ErrorLogger.h" />
+    <ClInclude Include="MeshDecimator.h" />
     <ClInclude Include="Image_Data.h" />
     <ClInclude Include="Livescan_Data.h" />
+    <ClInclude Include="MeshSequence.h" />
     <ClInclude Include="NodeWrapper.h" />
     <ClInclude Include="PointCloudSuite.h" />
+    <ClInclude Include="SingleMeshSuite.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="STB_Image_Wrapper.h" />
     <ClInclude Include="TestFFT.h" />
@@ -217,6 +235,8 @@
     <ClInclude Include="MeshingVoxelGrid.h" />
     <ClInclude Include="VolumeSequence.h" />
     <ClInclude Include="VoxelGridData.h" />
+    <ClInclude Include="VV_Mesh.h" />
+    <ClInclude Include="VV_Mesh_Abstract_Attribute.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

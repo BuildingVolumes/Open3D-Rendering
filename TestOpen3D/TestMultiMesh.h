@@ -2,6 +2,8 @@
 
 #include "TestSuite.h"
 #include "VolumeSequence.h"
+//#include <draco/compression/encode.h>
+//#include "draco/compression/encode.h"
 
 class TestMultiMesh : public TestSuite
 {
@@ -21,4 +23,8 @@ public:
 	void SaveGridZipIframes();
 
 	void SaveGridFourierIframes();
+
+	void SaveDracoMesh();
+
+	void TestDecimation();
 };

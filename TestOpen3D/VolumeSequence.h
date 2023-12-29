@@ -48,11 +48,17 @@ public:
 
 	int SaveVolumeStream(std::string filename_without_extension, SaveFileFormat format, int start_frame = 0, int end_frame = MAXINT32);
 
+	int SaveAllFramesAsMeshes(std::string root_folder, std::string main_file_name, std::string mesh_filename_without_extension);
+
+	void SaveFrameAsMesh(std::string filename, int frame_number);
+
 	//int SaveVolumeStreamFourier(std::string filename, int start_frame = 0, int end_frame = MAXINT32);
 	//
 	//int SaveVolumeStreamZipAlgorithm(std::string filename, int start_frame = 0, int end_frame = MAXINT32);
 
 	int LoadVolumeStreamAndExtractMeshes(std::string filename);
+
+	std::shared_ptr<MeshingVoxelGrid> GetVoxelGridAtFrame(int frame);
 
 	template<class T>
 	void DrawObject(T& object_to_draw)

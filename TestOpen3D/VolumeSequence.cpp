@@ -4,6 +4,9 @@
 #include <vector>
 #include "AdditionalUtilities.h"
 
+#define DEBUG_VOLUME_SEQUENCE 0
+//#define DEBUG_VOLUME_SEQUENCE 1
+
 VolumeSequence::VolumeSequence()
 {
 	
@@ -88,6 +91,10 @@ int VolumeSequence::LoadImageSequences(std::string root_folder, std::string intr
 
 int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, SaveFileFormat format, int start_frame, int end_frame)
 {
+	std::vector<int> frame_locations;
+
+	int byte_count = 0;
+
 	std::string filename = filename_without_extension;
 
 	int frames_per_debug = 100;
@@ -142,10 +149,23 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 
 	savefile.write(reinterpret_cast<char*>(&has_threshold_int), sizeof(int));
 
+	byte_count += 3 * sizeof(int);
+
+	int frame_bytes_start = byte_count;
+
+	for (int i = start_frame; i < end_frame; ++i)
+	{
+		frame_locations.push_back(0);
+		savefile.write(reinterpret_cast<char*>(&frame_locations[i - start_frame]), sizeof(int));
+		byte_count += sizeof(int);
+	}
+
+	int frame_bytes_end = byte_count;
+
 	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>();
 	mvg->SetData(mvp);
 
-	mvg->SaveMVP(savefile);
+	byte_count += mvg->SaveMVP(savefile);
 
 	std::shared_ptr<MeshingVoxelGrid> mvg_storage = std::make_shared<MeshingVoxelGrid>();
 
@@ -158,12 +178,16 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 
 	for (int i = start_frame; i < end_frame; ++i)
 	{
+#if DEBUG_VOLUME_SEQUENCE
 		if (i % frames_per_debug == 0)
 		{
 			std::cout << "Saving frame " << std::to_string(i) << " of " << filename << "..." << std::endl;
 		}
+#endif
 
 		++frames_processed;
+
+		frame_locations[i - start_frame] = byte_count;
 
 		cm.AllCamerasSeekFrame(i);
 		cm.PackNewVoxelGrid(&(*mvg));
@@ -197,20 +221,38 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 			}
 
 			savefile.write(reinterpret_cast<char*>(&is_Iframe), sizeof(int));
+			byte_count += sizeof(int);
 		}
 
 		switch (format)
 		{
 		case SaveFileFormat::FOURIER:
-			mvg->SaveGridFourierBinaryWithoutMVP(savefile, trim.x(), trim.y(), trim.z());
+			byte_count += mvg->SaveGridFourierBinaryWithoutMVP(savefile, trim.x(), trim.y(), trim.z());
 			break;
 		case SaveFileFormat::ZIP:
-			mvg->SaveGridZipBinaryWithoutMVP(savefile);
+			byte_count += mvg->SaveGridZipBinaryWithoutMVP(savefile);
 			break;
 		}
 
+		//frame_locations[i - start_frame] = byte_count;
+#if DEBUG_VOLUME_SEQUENCE
+		std::cout << "BYTE LOCATION OF FRAME " << i << ": " << frame_locations[i - start_frame] << std::endl;
+#endif
 		mvg->FlushGrid();
 	}
+
+	int file_end = byte_count;
+
+	savefile.seekp(frame_bytes_start);
+
+	for (int i = start_frame; i < end_frame; i += sizeof(int))
+	{
+		savefile.write(reinterpret_cast<char*>(&frame_locations[i - start_frame]), sizeof(int));
+	}
+
+	savefile.seekp(file_end);
+
+	std::cout << "FILE END: " << file_end << ", ACCORDING TO FILE: " << savefile.tellp() << std::endl;
 
 	savefile.close();
 
@@ -220,6 +262,82 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 	}
 
 	return frames_processed;
+}
+
+int VolumeSequence::SaveAllFramesAsMeshes(std::string root_folder, std::string main_file_name, std::string mesh_filename_without_extension)
+{
+	std::ofstream main_savefile;
+
+	int framecount = cm.GetPlayableFrameCount();
+
+	main_savefile.open(root_folder + "/" + main_file_name);
+
+	for (int i = 0; i < framecount; ++i)
+	{
+		std::cout << "Saving Frame " << i << "..." << std::endl;
+
+		std::string new_name = root_folder + "/" + mesh_filename_without_extension + "_" + GetNumberFixedLength(i, 8);// std::to_string(i);
+
+		cm.AllCamerasSeekFrame(i);
+
+		auto tri_mesh = cm.GetMeshUsingNewVoxelGrid(mvp, 0);
+
+		std::cout << "verts: " << tri_mesh->HasVertices() << ", count: " << tri_mesh->vertices_.size() << std::endl;
+		std::cout << "tris: " << tri_mesh->HasTriangles() << ", count: " << tri_mesh->triangles_.size() << std::endl;
+		std::cout << "normals: " << tri_mesh->HasTriangleNormals() << ", count: " << tri_mesh->triangle_normals_.size() << std::endl;
+
+		if (!open3d::io::WriteTriangleMeshToOBJ(new_name + ".obj", *tri_mesh, true, false, true, false, true, false))
+		{
+			system("pause");
+			//std::cout << open3d::core::
+		}
+
+		//main_savefile.write(new_name.c_str(), new_name.size());
+		main_savefile << new_name << "\n";
+	}
+
+	main_savefile.close();
+
+	std::cout << "DONE!" << std::endl;
+}
+
+void VolumeSequence::SaveFrameAsMesh(std::string filename, int frame_number)
+{
+	//std::ofstream main_savefile;
+
+	//main_savefile.open(filename);
+
+	cm.AllCamerasSeekFrame(frame_number);
+
+	//auto tri_mesh = cm.GetMeshUsingNewVoxelGrid(mvp, 0);
+
+	MKV_Rendering::VoxelGridData vgd;
+
+	vgd.voxel_size = mvp.voxel_size;
+	//vgd.
+	//vgd.signed_distance_field_truncation = 0.03f;
+
+	auto tri_mesh = cm.GetMesh(&vgd).ToLegacyTriangleMesh();
+
+	//std::cout << "verts: " << tri_mesh->HasVertices() << ", count: " << tri_mesh->vertices_.size() << std::endl;
+	//std::cout << "tris: " << tri_mesh->HasTriangles() << ", count: " << tri_mesh->triangles_.size() << std::endl;
+	//std::cout << "normals: " << tri_mesh->HasTriangleNormals() << ", count: " << tri_mesh->triangle_normals_.size() << std::endl;
+
+	std::cout << "verts: " << tri_mesh.HasVertices() << ", count: " << tri_mesh.vertices_.size() << std::endl;
+	std::cout << "tris: " << tri_mesh.HasTriangles() << ", count: " << tri_mesh.triangles_.size() << std::endl;
+	std::cout << "normals: " << tri_mesh.HasTriangleNormals() << ", count: " << tri_mesh.triangle_normals_.size() << std::endl;
+
+	//if (!open3d::io::WriteTriangleMeshToOBJ(filename, *tri_mesh, true, false, true, false, true, false))
+	if (!open3d::io::WriteTriangleMeshToOBJ(filename, tri_mesh, true, false, true, false, true, false))
+	{
+		std::cout << "Open3D refused to write file" << std::endl;
+		system("pause");
+		//std::cout << open3d::core::
+	}
+	else
+	{
+		std::cout << "Triangle mesh was successfully written as: " << filename << std::endl;
+	}
 }
 
 //int VolumeSequence::SaveVolumeStreamFourier(std::string filename, int start_frame, int end_frame)
@@ -296,8 +414,9 @@ int VolumeSequence::LoadVolumeStreamAndExtractMeshes(std::string filename)
 
 	for (int i = start_frame; i < end_frame; ++i)
 	{
+#if DEBUG_VOLUME_SEQUENCE
 		std::cout << "Loading frame " << std::to_string(i) << std::endl;
-
+#endif
 		++frames_processed;
 
 		mvg.ReadGridFourierFromBinary(savefile);
@@ -313,6 +432,12 @@ int VolumeSequence::LoadVolumeStreamAndExtractMeshes(std::string filename)
 	savefile.close();
 
 	return frames_processed;
+}
+
+std::shared_ptr<MeshingVoxelGrid> VolumeSequence::GetVoxelGridAtFrame(int frame)
+{
+	cm.AllCamerasSeekFrame(frame);
+	return cm.GetNewVoxelGrid(mvp);
 }
 
 //int VolumeSequence::SaveVolumeStreamZipAlgorithm(std::string filename, int start_frame, int end_frame)

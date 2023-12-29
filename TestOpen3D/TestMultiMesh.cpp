@@ -1,8 +1,12 @@
 #include "TestMultiMesh.h"
 
+//#include "MeshDecimator.h"
+
+//#include <vcg/>
+
 void TestMultiMesh::run(int argc, char** argv)
 {
-	SaveGridFourier();
+	//SaveGridFourier();
 
 	//LoadGridFourier();
 
@@ -11,6 +15,10 @@ void TestMultiMesh::run(int argc, char** argv)
 	//SaveGridZip();
 
 	//SaveGridZipIframes();
+
+	//SaveDracoMesh();
+
+	///TestDecimation();
 }
 
 void TestMultiMesh::SaveGridFourier()
@@ -194,4 +202,76 @@ void TestMultiMesh::SaveGridZipIframes()
 
 void TestMultiMesh::SaveGridFourierIframes()
 {
+}
+
+void TestMultiMesh::SaveDracoMesh()
+{
+	MeshingVoxelParams mvp;
+
+	int voxel_count = 128;
+
+	mvp.center = Eigen::Vector3d(0, 0, 0);
+	mvp.points_x = voxel_count + 1;
+	mvp.points_y = 2 * voxel_count + 1;
+	mvp.points_z = voxel_count + 1;
+	mvp.voxel_size = 1.05 / (double)voxel_count;
+
+	//double threshold = 40000;
+	//double epsilon = 0.1;
+
+	//std::string save_name = "DRACO_" + std::to_string(voxel_count);
+
+	vs.LoadImageSequences("_TEST_DATA/july15-spinninghogue_0", "Intrinsics_Calib_", "Extrinsics_", "Color_", "Depth_", ".matte");
+
+	vs.SetVoxelGridParams(mvp);
+
+	vs.SaveAllFramesAsMeshes("_MeshDump/MeshesT1", "MeshListT1.txt", "MeshT1");
+
+	//std::cout << dm.num_faces() << ", " << dm.num_points() << std::endl;
+
+	//dm.
+
+	//draco::EncoderBuffer eb;
+
+	//std::cout << "Mesh Bytes: " << sizeof(mesh->vertices_) << std::endl;
+	//
+	//std::cout << "Verts: " << mesh->vertices_.size() << std::endl;
+	//std::cout << "Tris: " << mesh->triangles_.size() << std::endl;
+
+	//eb.Encode(*mesh);
+
+	//vs.
+	//
+	//draco::EncoderBuffer buffer;
+	//
+	//buffer.Encode();
+	//
+	//buffer.
+}
+
+void TestMultiMesh::TestDecimation()
+{
+	MeshingVoxelParams mvp;
+
+	int voxel_count = 128;
+
+	mvp.center = Eigen::Vector3d(0, 0, 0);
+	mvp.points_x = voxel_count + 1;
+	mvp.points_y = 2 * voxel_count + 1;
+	mvp.points_z = voxel_count + 1;
+	mvp.voxel_size = 1.05 / (double)voxel_count;
+
+	vs.LoadImageSequences("_TEST_DATA/july15-spinninghogue_0", "Intrinsics_Calib_", "Extrinsics_", "Color_", "Depth_", ".matte");
+
+	vs.SetVoxelGridParams(mvp);
+
+	auto mesh = vs.GetVoxelGridAtFrame(200)->ExtractMesh();
+
+	vs.DrawObject(*mesh);
+
+	//MeshDecimator md;
+	//
+	//md.DecimateMesh(mesh, mesh->triangles_.size() / 4);
+
+	vs.DrawObject(*mesh);
 }

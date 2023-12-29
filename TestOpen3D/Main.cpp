@@ -33,6 +33,8 @@
 #include "AlembicExportSuite.h"
 #include "PointCloudSuite.h"
 #include "TestMultiMesh.h"
+#include "CGAL_TestSuite.h"
+#include "DracoEXE_TestSuite.h"
 
 //#define PIPELINE_MODE 2
 #define PIPELINE_MODE 0
@@ -728,10 +730,12 @@ void CodeJ()
     TestSuite* suite = nullptr;
 
     //suite = new TestFFT();
-    suite = new TestMultiMesh();
+    //suite = new TestMultiMesh();
     //suite = new AlembicExportSuite();
     //suite = new PointCloudSuite();
     //suite = new TestZIP();
+    //suite = new CGAL_TestSuite();
+    suite = new DracoEXE_TestSuite();
 
     suite->run(0, nullptr);
 

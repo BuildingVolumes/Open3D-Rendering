@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <fftw3.h>
+//#include "MeshDecimator.h"
 
 struct MeshingVoxelParams
 {
@@ -225,13 +226,13 @@ public:
 
     bool SaveGridFourierToBinaryFile(std::ofstream &savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
 
-    bool SaveMVP(std::ofstream& savefile);
-    bool SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+    int SaveMVP(std::ofstream& savefile);
+    int SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
 
-    bool SaveGridZipBinaryWithoutMVP(std::ofstream& savefile);
+    int SaveGridZipBinaryWithoutMVP(std::ofstream& savefile);
 
-    void StandardFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
-    void CompactFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+    int StandardFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+    int CompactFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
 
     bool ReadGridFourierFromBinary(std::ifstream &savefile);
 
