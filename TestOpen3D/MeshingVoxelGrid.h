@@ -28,6 +28,36 @@ struct MeshingVoxelParams
         this->center = center;
     }
 
+    int SaveToFile(std::ofstream& savefile)
+    {
+        savefile.write(reinterpret_cast<char*>(&points_x), sizeof(int));
+        savefile.write(reinterpret_cast<char*>(&points_y), sizeof(int));
+        savefile.write(reinterpret_cast<char*>(&points_z), sizeof(int));
+
+        savefile.write(reinterpret_cast<char*>(&voxel_size), sizeof(double));
+
+        savefile.write(reinterpret_cast<char*>(&center.x()), sizeof(double));
+        savefile.write(reinterpret_cast<char*>(&center.y()), sizeof(double));
+        savefile.write(reinterpret_cast<char*>(&center.z()), sizeof(double));
+
+        return sizeof(double) * 4 + sizeof(int) * 3;
+    }
+
+    int LoadFromFile(std::ifstream& savefile)
+    {
+        savefile.read(reinterpret_cast<char*>(&points_x), sizeof(int));
+        savefile.read(reinterpret_cast<char*>(&points_y), sizeof(int));
+        savefile.read(reinterpret_cast<char*>(&points_z), sizeof(int));
+        
+        savefile.read(reinterpret_cast<char*>(&voxel_size), sizeof(double));
+        
+        savefile.read(reinterpret_cast<char*>(&center.x()), sizeof(double));
+        savefile.read(reinterpret_cast<char*>(&center.y()), sizeof(double));
+        savefile.read(reinterpret_cast<char*>(&center.z()), sizeof(double));
+
+        return sizeof(double) * 4 + sizeof(int) * 3;
+    }
+
     double voxel_size;
     int points_x, points_y, points_z;
     Eigen::Vector3d center;
@@ -52,7 +82,7 @@ enum MeshingVoxelType
 struct SingleVoxel
 {
     //The solidity of the voxel
-    double value = 0.0f;
+    double value;
 
     //How certain we are of the voxel's value
     //double weight = 0.0f;
@@ -200,7 +230,11 @@ public:
     /// Copy a array of data into the grid. This will not change the dimensions or other voxel grid data.
     /// </summary>
     /// <param name="double_stream">Array of double values</param>
-    void LoadGridAsDoubleArray(double* double_stream);
+    void LoadGridAsDoubleArray(double* stream);
+
+    void LoadFromOpen3D(open3d::t::geometry::TSDFVoxelGrid &grid);
+
+    void SetGridValueKillNegatives(int loc, double value) { grid[loc].value = abs(value); grid[loc].voxel_type = ((value >= 0) ? MeshingVoxelType::SOLID : MeshingVoxelType::AIR); }
 
     void SetGridValue(int loc, double value) { grid[loc].value = value; }
 
@@ -226,13 +260,17 @@ public:
 
     bool SaveGridFourierToBinaryFile(std::ofstream &savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
 
-    int SaveMVP(std::ofstream& savefile);
     int SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z);
-
     int SaveGridZipBinaryWithoutMVP(std::ofstream& savefile);
+
+
+
+    int LoadGridFourierBinary(std::ifstream& savefile, int start_loc);
+    int LoadGridZipBinary(std::ifstream& savefile, int start_loc);
 
     int StandardFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
     int CompactFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
+    int CompactInverseFourierIteration(std::ifstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z);
 
     bool ReadGridFourierFromBinary(std::ifstream &savefile);
 
@@ -286,7 +324,8 @@ public:
         {
             double v1 = (grid[i].voxel_type == MeshingVoxelType::SOLID ? grid[i].value : -grid[i].value);
             double v2 = (other.grid[i].voxel_type == MeshingVoxelType::SOLID ? other.grid[i].value : -other.grid[i].value);
-            total += abs(v1 - v2);
+            double non_abs = v1 - v2;
+            total += ((non_abs > 0) ? non_abs : -non_abs);
         }
 
         return total;

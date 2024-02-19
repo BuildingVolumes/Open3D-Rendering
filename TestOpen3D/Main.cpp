@@ -28,13 +28,14 @@
 
 #include "stb_image.h"
 
-#include "TestFFT.h"
-#include "TestZIP.h"
-#include "AlembicExportSuite.h"
-#include "PointCloudSuite.h"
-#include "TestMultiMesh.h"
-#include "CGAL_TestSuite.h"
-#include "DracoEXE_TestSuite.h"
+//#include "TestFFT.h"
+//#include "TestZIP.h"
+//#include "AlembicExportSuite.h"
+//#include "PointCloudSuite.h"
+//#include "TestMultiMesh.h"
+//#include "CGAL_TestSuite.h"
+//#include "DracoEXE_TestSuite.h"
+#include "SuiteMaster.h"
 
 //#define PIPELINE_MODE 2
 #define PIPELINE_MODE 0
@@ -727,19 +728,23 @@ void CodeJ()
     //ErrorLogger::EXECUTE("Decoding Code Test", &MKV_Rendering::image_decode_test);
     //ErrorLogger::EXECUTE("Encoding Code Test", &MKV_Rendering::image_encode_test);
 
-    TestSuite* suite = nullptr;
+    SuiteMaster sm;
 
-    //suite = new TestFFT();
-    //suite = new TestMultiMesh();
-    //suite = new AlembicExportSuite();
-    //suite = new PointCloudSuite();
-    //suite = new TestZIP();
-    //suite = new CGAL_TestSuite();
-    suite = new DracoEXE_TestSuite();
+    sm.run(0, nullptr);
 
-    suite->run(0, nullptr);
-
-    delete suite;
+    //TestSuite* suite = nullptr;
+    //
+    ////suite = new TestFFT();
+    ////suite = new TestMultiMesh();
+    ////suite = new AlembicExportSuite();
+    ////suite = new PointCloudSuite();
+    ////suite = new TestZIP();
+    ////suite = new CGAL_TestSuite();
+    //suite = new DracoEXE_TestSuite();
+    //
+    //suite->run(0, nullptr);
+    //
+    //delete suite;
 }
 
 

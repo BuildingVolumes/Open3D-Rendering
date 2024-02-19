@@ -45,6 +45,27 @@
       <Filter>TestSuites</Filter>
     </ClCompile>
     <ClCompile Include="AbstractSequence.cpp" />
+    <ClCompile Include="MeshErrorMetrics.cpp" />
+    <ClCompile Include="ErrorMetricSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
+    <ClCompile Include="PolygonalMeshReader.cpp" />
+    <ClCompile Include="VoxelEncodeDecodeSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
+    <ClCompile Include="VDMC_TestSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
+    <ClCompile Include="CleanupSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
+    <ClCompile Include="ShallowVoxelGrid.cpp" />
+    <ClCompile Include="VV_MeshSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
+    <ClCompile Include="UVAtlas_TestSuite.cpp">
+      <Filter>TestSuites</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="KinectRenderer.cpp">
@@ -127,6 +148,36 @@
     </ClInclude>
     <ClInclude Include="MeshSequence.h" />
     <ClInclude Include="AbstractSequence.h" />
+    <ClInclude Include="MeshErrorMetrics.h" />
+    <ClInclude Include="ErrorMetricSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="SuiteMaster.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="PolygonalMeshReader.h" />
+    <ClInclude Include="VoxelEncodeDecodeSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="VDMC_TestSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="CleanupSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="ShallowVoxelGrid.h" />
+    <ClInclude Include="CGAL_HoleFilling.h">
+      <Filter>Playground</Filter>
+    </ClInclude>
+    <ClInclude Include="CGAL_RefineAndFair.h">
+      <Filter>Playground</Filter>
+    </ClInclude>
+    <ClInclude Include="VV_MeshSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
+    <ClInclude Include="UVAtlas_TestSuite.h">
+      <Filter>TestSuites</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="VV_Mesh">
@@ -134,6 +185,9 @@
     </Filter>
     <Filter Include="TestSuites">
       <UniqueIdentifier>{450804b8-44a0-4d02-8b12-71cc241ab1bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Playground">
+      <UniqueIdentifier>{1d8aba66-65b8-420b-b2aa-8e837d63e16a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

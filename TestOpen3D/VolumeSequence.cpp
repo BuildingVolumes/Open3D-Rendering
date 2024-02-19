@@ -97,7 +97,7 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 
 	std::string filename = filename_without_extension;
 
-	int frames_per_debug = 100;
+	int frames_per_debug = 50;
 
 	switch (format)
 	{
@@ -165,7 +165,13 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 	std::shared_ptr<MeshingVoxelGrid> mvg = std::make_shared<MeshingVoxelGrid>();
 	mvg->SetData(mvp);
 
-	byte_count += mvg->SaveMVP(savefile);
+	std::cout << "Params: \n" <<
+		start_frame << ", " << end_frame << "\n" <<
+		mvp.points_x << ", " << mvp.points_y << ", " << mvp.points_z << "\n" <<
+		mvp.voxel_size << "\n" <<
+		mvp.center << std::endl;
+
+	byte_count += mvp.SaveToFile(savefile); //mvg->SaveMVP(savefile);
 
 	std::shared_ptr<MeshingVoxelGrid> mvg_storage = std::make_shared<MeshingVoxelGrid>();
 
@@ -236,7 +242,11 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 
 		//frame_locations[i - start_frame] = byte_count;
 #if DEBUG_VOLUME_SEQUENCE
-		std::cout << "BYTE LOCATION OF FRAME " << i << ": " << frame_locations[i - start_frame] << std::endl;
+		if (i % frames_per_debug == 0)
+		{
+			std::cout << "BYTE LOCATION OF FRAME " << i << ": " << frame_locations[i - start_frame] << std::endl;
+		}
+
 #endif
 		mvg->FlushGrid();
 	}
@@ -245,9 +255,10 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 
 	savefile.seekp(frame_bytes_start);
 
-	for (int i = start_frame; i < end_frame; i += sizeof(int))
+	for (int i = start_frame; i < end_frame; ++i)
 	{
 		savefile.write(reinterpret_cast<char*>(&frame_locations[i - start_frame]), sizeof(int));
+		//std::cout << "Saved Frame " << i << ": " << frame_locations[i - start_frame] << std::endl;
 	}
 
 	savefile.seekp(file_end);
@@ -262,6 +273,124 @@ int VolumeSequence::SaveVolumeStream(std::string filename_without_extension, Sav
 	}
 
 	return frames_processed;
+}
+
+void VolumeSequence::LoadVolumeStream(std::string filename_with_extension)
+{
+	std::vector<std::string> filename_and_ext;
+
+	SplitString(filename_with_extension, filename_and_ext, ".");
+
+	if (filename_and_ext[1][2] == 'z')
+	{
+		decode_type = SaveFileFormat::ZIP;
+	}
+	else if (filename_and_ext[1][2] == 'f')
+	{
+		decode_type = SaveFileFormat::FOURIER;
+	}
+	else
+	{
+		std::cout << "Invalid file type!" << std::endl;
+		return;
+	}
+
+	if (current_loaded_stream.is_open())
+	{
+		std::cout << "Stream already loaded!" << std::endl;
+		decode_type = SaveFileFormat::ERROR_NO_TYPE;
+		return;
+	}
+
+	current_loaded_stream.open(filename_with_extension, std::ios::binary);
+
+	if (!current_loaded_stream.is_open())
+	{
+		std::cout << "Couldn't open file" << std::endl;
+		decode_type = SaveFileFormat::ERROR_NO_TYPE;
+		return;
+	}
+
+	int byte_count = 0;
+
+	int has_threshold_int = 0;
+
+	int isIframe = 0;
+
+	current_loaded_stream.read(reinterpret_cast<char*>(&loaded_sequence_start), sizeof(int));
+	current_loaded_stream.read(reinterpret_cast<char*>(&loaded_sequence_end), sizeof(int));
+
+	current_loaded_stream.read(reinterpret_cast<char*>(&has_threshold_int), sizeof(int));
+
+	int frame_count = loaded_sequence_end - loaded_sequence_start;
+
+	for (int i = loaded_sequence_start; i < loaded_sequence_end; ++i)
+	{
+		loaded_frame_locations.push_back(0);
+		current_loaded_stream.read(reinterpret_cast<char*>(&loaded_frame_locations[i - loaded_sequence_start]), sizeof(int));
+		byte_count += sizeof(int);
+	
+		//std::cout << "Frame " << i << ": " << loaded_frame_locations[i - loaded_sequence_start] << std::endl;
+	}
+
+	byte_count += 3 * sizeof(int);
+
+	byte_count += mvp.LoadFromFile(current_loaded_stream);
+
+	//std::cout << "Params: \n" << 
+	//	loaded_sequence_start << ", " << loaded_sequence_end << "\n" <<
+	//	mvp.points_x << ", " << mvp.points_y << ", " << mvp.points_z << "\n" << 
+	//	mvp.voxel_size << "\n" << 
+	//	mvp.center << std::endl;
+
+	return;
+}
+
+std::shared_ptr<MeshingVoxelGrid> VolumeSequence::LoadFrameFromStream(int frame_num)
+{
+	auto to_return = std::make_shared<MeshingVoxelGrid>();
+
+	int array_loc = frame_num - loaded_sequence_start;
+	int frame_loc = loaded_frame_locations[array_loc];
+
+	std::cout << "Loading at: " << frame_num << ", at file location: " << frame_loc << std::endl;
+
+
+	to_return->SetData(mvp);
+
+	switch (decode_type)
+	{
+	case SaveFileFormat::FOURIER:
+		to_return->LoadGridFourierBinary(current_loaded_stream, frame_loc);
+		break;
+
+	case SaveFileFormat::ZIP:
+		to_return->LoadGridZipBinary(current_loaded_stream, frame_loc);
+		break;
+
+	default:
+		std::cout << "ERROR! Irregular format!" << std::endl;
+		break;
+	}
+
+	return to_return;
+}
+
+void VolumeSequence::CloseLoadedVolumeStream()
+{
+	if (!current_loaded_stream.is_open())
+	{
+		std::cout << "No stream open!" << std::endl;
+		return;
+	}
+
+	current_loaded_stream.close();
+	loaded_frame_locations.clear();
+
+	loaded_sequence_end = 0;
+	loaded_sequence_start = 0;
+
+	decode_type = SaveFileFormat::ERROR_NO_TYPE;
 }
 
 int VolumeSequence::SaveAllFramesAsMeshes(std::string root_folder, std::string main_file_name, std::string mesh_filename_without_extension)

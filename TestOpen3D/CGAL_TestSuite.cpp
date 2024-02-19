@@ -164,7 +164,7 @@ void CGAL_TestSuite::TestMarshalling()
 
     auto mesh = vs.GetVoxelGridAtFrame(200)->ExtractMesh();
 
-    auto sm = dm.GetOpen3DMeshAsCGAL(&(*mesh));
+    auto sm = dm.GetOpen3DMeshAsCGAL_SC_D_P3(&(*mesh));
 
     std::cout << "Verts: " << sm->number_of_vertices() << std::endl;
     std::cout << "Faces: " << sm->number_of_faces() << std::endl;

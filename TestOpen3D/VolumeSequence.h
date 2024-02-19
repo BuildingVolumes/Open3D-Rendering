@@ -1,11 +1,14 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <fstream>
 #include "CameraManager.h"
 #include "MeshingVoxelGrid.h"
 
 enum SaveFileFormat
 {
+	ERROR_NO_TYPE,
 	FOURIER,
 	ZIP
 };
@@ -27,6 +30,15 @@ class VolumeSequence
 	double threshold = 0;
 	double culling_value = 0;
 
+	std::ifstream current_loaded_stream;
+
+	SaveFileFormat decode_type;
+
+	int loaded_sequence_start;
+	int loaded_sequence_end;
+
+	std::vector<int> loaded_frame_locations;
+
 public:
 
 	VolumeSequence();
@@ -47,6 +59,12 @@ public:
 	int LoadImageSequences(std::string root_folder, std::string intrinsics_handle, std::string extrinsics_handle, std::string color_handle, std::string depth_handle, std::string matte_handle = "", float FPS = 5.0);
 
 	int SaveVolumeStream(std::string filename_without_extension, SaveFileFormat format, int start_frame = 0, int end_frame = MAXINT32);
+
+	void LoadVolumeStream(std::string filename_with_extension);
+
+	std::shared_ptr<MeshingVoxelGrid> LoadFrameFromStream(int frame_num);
+
+	void CloseLoadedVolumeStream();
 
 	int SaveAllFramesAsMeshes(std::string root_folder, std::string main_file_name, std::string mesh_filename_without_extension);
 

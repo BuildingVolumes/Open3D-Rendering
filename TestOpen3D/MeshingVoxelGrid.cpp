@@ -11,20 +11,24 @@
 #define MESH_COLORS_ENABLED_MVG 0
 //#define MESH_COLORS_ENABLED_MVG 1
 
+
 MeshingVoxelGrid::MeshingVoxelGrid(MeshingVoxelParams& params)
 {
 	SetData(params);
 }
 
+
 MeshingVoxelGrid::MeshingVoxelGrid()
 {
 }
+
 
 MeshingVoxelGrid::~MeshingVoxelGrid()
 {
 	delete[] grid;
 	grid = nullptr;
 }
+
 
 void MeshingVoxelGrid::SetData(MeshingVoxelParams& params)
 {
@@ -48,6 +52,7 @@ void MeshingVoxelGrid::SetData(MeshingVoxelParams& params)
 	std::cout << "Center: " << params.center.x() << ", " << params.center.y() << ", " << params.center.z() << std::endl;
 #endif
 }
+
 
 void MeshingVoxelGrid::AddImage(open3d::geometry::Image& color, open3d::geometry::Image& depth, Eigen::Matrix4d extrinsics, Eigen::Matrix3d intrinsics)
 {
@@ -79,8 +84,8 @@ void MeshingVoxelGrid::AddImage(open3d::geometry::Image& color, open3d::geometry
 
 				auto voxel = &grid[grid_loc];
 
-				Eigen::Vector3d uvz = intrinsics *
-					(rotation * voxel_position + position);
+				Eigen::Vector3d uvz = intrinsics * (rotation * voxel_position + position);
+				//Eigen::Vector3d uvz = intrinsic_inv * (rotation * voxel_position + position);
 
 				double pix_u = uvz.x() / (uvz.z());
 				double pix_v = uvz.y() / (uvz.z());
@@ -95,18 +100,19 @@ void MeshingVoxelGrid::AddImage(open3d::geometry::Image& color, open3d::geometry
 					continue;
 				}
 
-				int int_x = std::clamp((int)(pix_u * color.width_), 0, color.width_ - 1);
-				int int_y = std::clamp((int)(pix_v * color.height_), 0, color.height_ - 1);
+				//int int_x = std::clamp((int)(pix_u * color.width_), 0, color.width_ - 1);
+				//int int_y = std::clamp((int)(pix_v * color.height_), 0, color.height_ - 1);
 				
 				//auto color_r = *color.PointerAt<uint8_t>(int_x, int_y, 0);
 				//auto color_g = *color.PointerAt<uint8_t>(int_x, int_y, 1);
 				//auto color_b = *color.PointerAt<uint8_t>(int_x, int_y, 2);
 
-				auto color_r = *color.PointerAt<uint8_t>(pix_u, pix_v, 0);
-				auto color_g = *color.PointerAt<uint8_t>(pix_u, pix_v, 1);
-				auto color_b = *color.PointerAt<uint8_t>(pix_u, pix_v, 2);
+				//auto color_r = *color.PointerAt<uint8_t>(pix_u, pix_v, 0);
+				//auto color_g = *color.PointerAt<uint8_t>(pix_u, pix_v, 1);
+				//auto color_b = *color.PointerAt<uint8_t>(pix_u, pix_v, 2);
 
 				Eigen::Vector3d pixel_position = rotation_inv * (intrinsic_inv * Eigen::Vector3d(uvz.x(), uvz.y(), pixel_depth) - position);
+				//Eigen::Vector3d pixel_position = rotation_inv * (intrinsics * Eigen::Vector3d(uvz.x(), uvz.y(), pixel_depth) - position);
 
 				Eigen::Vector3d dist = (pixel_position - voxel_position);
 				double mag = sqrt(dist.dot(dist)) / params.voxel_size;
@@ -180,6 +186,7 @@ void MeshingVoxelGrid::AddImage(open3d::geometry::Image& color, open3d::geometry
 #endif
 }
 
+
 void MeshingVoxelGrid::KillEmptySpace()
 {
 	int empty_voxels = 0;
@@ -251,6 +258,7 @@ void MeshingVoxelGrid::KillEmptySpace()
 	std::cout << empty_voxels << " empty voxels found: filled " << filled_solid << " solid, filled " << filled_air << " air" << std::endl;
 #endif
 }
+
 
 std::shared_ptr<open3d::geometry::TriangleMesh> MeshingVoxelGrid::ExtractMesh()
 {
@@ -415,6 +423,7 @@ std::shared_ptr<open3d::geometry::TriangleMesh> MeshingVoxelGrid::ExtractMesh()
 	return to_return;
 }
 
+
 std::tuple<int, int> MeshingVoxelGrid::LerpCorner(SingleVoxel* voxel_array, std::map<std::tuple<int, int>, MeshingVoxelEdge>& edge_map, 
 	std::vector<std::tuple<int, int>>& keys, int elem1, int elem2, Eigen::Vector3d &pos1, Eigen::Vector3d &pos2)
 {
@@ -439,6 +448,7 @@ std::tuple<int, int> MeshingVoxelGrid::LerpCorner(SingleVoxel* voxel_array, std:
 
 	return elem_tuple;
 }
+
 
 void MeshingVoxelGrid::CullArtifacts(int artifact_size)
 {
@@ -591,10 +601,25 @@ void MeshingVoxelGrid::CullArtifacts(int artifact_size)
 	//std::cout << "Culled: " << culled << "/" << (params.points_x * params.points_y * params.points_z) << std::endl;
 }
 
-void MeshingVoxelGrid::LoadGridAsDoubleArray(double* double_stream)
-{
 
+void MeshingVoxelGrid::LoadGridAsDoubleArray(double* stream)
+{
+	int count = params.points_x * params.points_y * params.points_z;
+	for (int i = 0; i < count; ++i)
+	{
+		if (stream[i] > 0)
+		{
+			grid[i].voxel_type = MeshingVoxelType::SOLID;
+			grid[i].value = stream[i];
+		}
+		else
+		{
+			grid[i].voxel_type = MeshingVoxelType::AIR;
+			grid[i].value = -stream[i];
+		}
+	}
 }
+
 
 bool MeshingVoxelGrid::SaveDenseGridToBinaryFile(std::string filename)
 {
@@ -644,6 +669,7 @@ bool MeshingVoxelGrid::SaveDenseGridToBinaryFile(std::string filename)
 	return true;
 }
 
+
 bool MeshingVoxelGrid::SaveGridFourierToBinaryFile(std::string filename, int corner_dim_x, int corner_dim_y, int corner_dim_z)
 {
 	std::ofstream savefile;
@@ -663,6 +689,7 @@ bool MeshingVoxelGrid::SaveGridFourierToBinaryFile(std::string filename, int cor
 
 	return true;
 }
+
 
 bool MeshingVoxelGrid::SaveDenseGridToPlaintextFile(std::string filename)
 {
@@ -705,11 +732,13 @@ bool MeshingVoxelGrid::SaveDenseGridToPlaintextFile(std::string filename)
 	return false;
 }
 
+
 void MeshingVoxelGrid::StrPlusDelim(std::string str, std::string delim, std::ofstream &savefile)
 {
 	savefile.write(str.c_str(), str.size());
 	savefile.write(delim.c_str(), delim.size());
 }
+
 
 bool MeshingVoxelGrid::ReadDenseGridFromBinaryFile(std::string filename)
 {
@@ -773,6 +802,7 @@ bool MeshingVoxelGrid::ReadDenseGridFromBinaryFile(std::string filename)
 	return false;
 }
 
+
 bool MeshingVoxelGrid::ReadGridFourierFromBinary(std::string filename)
 {
 	std::ifstream savefile;
@@ -792,6 +822,7 @@ bool MeshingVoxelGrid::ReadGridFourierFromBinary(std::string filename)
 	return true;
 }
 
+
 bool MeshingVoxelGrid::ReadDenseGridFromPlaintextFile(std::string filename)
 {
 	//TODO
@@ -799,40 +830,40 @@ bool MeshingVoxelGrid::ReadDenseGridFromPlaintextFile(std::string filename)
 	return false;
 }
 
+
 bool MeshingVoxelGrid::SaveGridFourierToBinaryFile(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z)
 {
-	bool result = SaveMVP(savefile);
+	params.SaveToFile(savefile);
 
-	if (result)
-	{
-		result = result && SaveGridFourierBinaryWithoutMVP(savefile, corner_dim_x, corner_dim_y, corner_dim_z);
-	}
+	bool result = SaveGridFourierBinaryWithoutMVP(savefile, corner_dim_x, corner_dim_y, corner_dim_z);
 
 	return result;
 }
 
-int MeshingVoxelGrid::SaveMVP(std::ofstream& savefile)
-{
-	int byte_count = 0;
 
-	savefile.write(reinterpret_cast<char*>(&params.points_x), sizeof(int));
-	savefile.write(reinterpret_cast<char*>(&params.points_y), sizeof(int));
-	savefile.write(reinterpret_cast<char*>(&params.points_z), sizeof(int));
+//int MeshingVoxelGrid::SaveMVP(std::ofstream& savefile)
+//{
+//	int byte_count = 0;
+//
+//	savefile.write(reinterpret_cast<char*>(&params.points_x), sizeof(int));
+//	savefile.write(reinterpret_cast<char*>(&params.points_y), sizeof(int));
+//	savefile.write(reinterpret_cast<char*>(&params.points_z), sizeof(int));
+//
+//	byte_count += 3 * sizeof(int);
+//
+//	savefile.write(reinterpret_cast<char*>(&params.voxel_size), sizeof(double));
+//
+//	byte_count += sizeof(double);
+//
+//	savefile.write(reinterpret_cast<char*>(&params.center.x()), sizeof(double));
+//	savefile.write(reinterpret_cast<char*>(&params.center.y()), sizeof(double));
+//	savefile.write(reinterpret_cast<char*>(&params.center.z()), sizeof(double));
+//
+//	byte_count += 3 * sizeof(double);
+//
+//	return byte_count;
+//}
 
-	byte_count += 3 * sizeof(int);
-
-	savefile.write(reinterpret_cast<char*>(&params.voxel_size), sizeof(double));
-
-	byte_count += sizeof(double);
-
-	savefile.write(reinterpret_cast<char*>(&params.center.x()), sizeof(double));
-	savefile.write(reinterpret_cast<char*>(&params.center.y()), sizeof(double));
-	savefile.write(reinterpret_cast<char*>(&params.center.z()), sizeof(double));
-
-	byte_count += 3 * sizeof(double);
-
-	return byte_count;
-}
 
 int MeshingVoxelGrid::SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, int corner_dim_x, int corner_dim_y, int corner_dim_z)
 {
@@ -871,6 +902,7 @@ int MeshingVoxelGrid::SaveGridFourierBinaryWithoutMVP(std::ofstream& savefile, i
 
 	return byte_count;
 }
+
 
 int MeshingVoxelGrid::SaveGridZipBinaryWithoutMVP(std::ofstream& savefile)
 {
@@ -917,6 +949,138 @@ int MeshingVoxelGrid::SaveGridZipBinaryWithoutMVP(std::ofstream& savefile)
 
 	return byte_count;
 }
+
+
+//int MeshingVoxelGrid::LoadMVP(std::ifstream& savefile, int start_loc)
+//{
+//	savefile.seekg(start_loc);
+//
+//	int byte_count = 0;
+//
+//	savefile.read(reinterpret_cast<char*>(&params.points_x), sizeof(int));
+//	savefile.read(reinterpret_cast<char*>(&params.points_y), sizeof(int));
+//	savefile.read(reinterpret_cast<char*>(&params.points_z), sizeof(int));
+//
+//	byte_count += 3 * sizeof(int);
+//
+//	savefile.read(reinterpret_cast<char*>(&params.voxel_size), sizeof(double));
+//
+//	byte_count += sizeof(double);
+//
+//	savefile.read(reinterpret_cast<char*>(&params.center.x()), sizeof(double));
+//	savefile.read(reinterpret_cast<char*>(&params.center.y()), sizeof(double));
+//	savefile.read(reinterpret_cast<char*>(&params.center.z()), sizeof(double));
+//
+//	byte_count += 3 * sizeof(double);
+//
+//	return byte_count;
+//}
+
+
+int MeshingVoxelGrid::LoadGridFourierBinary(std::ifstream& savefile, int start_loc)
+{
+	int byte_count = 0;
+
+	savefile.seekg(start_loc);
+
+	int gridsize = params.points_x * params.points_y * params.points_z;
+
+	int corner_dim_x = 0;
+	int corner_dim_y = 0;
+	int corner_dim_z = 0;
+
+	savefile.read(reinterpret_cast<char*>(&corner_dim_x), sizeof(int));
+	savefile.read(reinterpret_cast<char*>(&corner_dim_y), sizeof(int));
+	savefile.read(reinterpret_cast<char*>(&corner_dim_z), sizeof(int));
+
+	byte_count += 3 * sizeof(int);
+
+	fftw_complex* signal = new fftw_complex[gridsize];
+	fftw_complex* result = new fftw_complex[gridsize];
+
+	byte_count += CompactInverseFourierIteration(savefile, result, corner_dim_x, corner_dim_y, corner_dim_z);
+
+	fftw_plan p = fftw_plan_dft_3d(params.points_x, params.points_y, params.points_z, result, signal, FFTW_BACKWARD, FFTW_ESTIMATE);
+
+	fftw_execute(p);
+
+	for (int i = 0; i < gridsize; ++i)
+	{
+		if (signal[i][0] > 0)
+		{
+			grid[i].voxel_type = MeshingVoxelType::SOLID;
+			grid[i].value = signal[i][0];
+		}
+		else
+		{
+			grid[i].voxel_type = MeshingVoxelType::AIR;
+			grid[i].value = -signal[i][0];
+		}
+	}
+
+	delete[] signal;
+	delete[] result;
+
+	return byte_count;
+}
+
+void MeshingVoxelGrid::LoadFromOpen3D(open3d::t::geometry::TSDFVoxelGrid& grid)
+{
+	auto block_hash = grid.GetBlockHashmap();
+
+	std::cout << "Block hash size: " << block_hash->Size() << std::endl;
+}
+
+
+int MeshingVoxelGrid::LoadGridZipBinary(std::ifstream& savefile, int start_loc)
+{
+	int byte_count = 0;
+
+	savefile.seekg(start_loc);
+
+	int gridsize = params.points_x * params.points_y * params.points_z;
+
+	std::cout << "Grid size: " << gridsize << std::endl;
+
+	double new_val;
+	double prev_val;
+	MeshingVoxelType type;
+
+	int count_start = 0;
+	int count = 0;
+
+	while (count_start < gridsize)
+	{
+		savefile.read(reinterpret_cast<char*>(&count), sizeof(int));
+		savefile.read(reinterpret_cast<char*>(&prev_val), sizeof(double));
+
+		if (prev_val > 0)
+		{
+			type = MeshingVoxelType::SOLID;
+		}
+		else
+		{
+			type = MeshingVoxelType::AIR;
+			prev_val = -prev_val;
+		}
+
+		byte_count += sizeof(int);
+		byte_count += sizeof(double);
+
+		//std::cout << count_start << ", " << count << " - " << prev_val << ", " << type << std::endl;
+
+		for (int i = count_start; i < count_start + count; ++i)
+		{
+			grid[i].voxel_type = type;
+			grid[i].value = prev_val;
+		}
+
+		count_start += count;
+	}
+
+	return byte_count;
+}
+
 
 int MeshingVoxelGrid::StandardFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z)
 {
@@ -979,6 +1143,7 @@ int MeshingVoxelGrid::StandardFourierIteration(std::ofstream& savefile, fftw_com
 	return byte_count;
 }
 
+
 int MeshingVoxelGrid::CompactFourierIteration(std::ofstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z)
 {
 	int byte_count = 0;
@@ -1025,6 +1190,55 @@ int MeshingVoxelGrid::CompactFourierIteration(std::ofstream& savefile, fftw_comp
 
 	return byte_count;
 }
+
+
+int MeshingVoxelGrid::CompactInverseFourierIteration(std::ifstream& savefile, fftw_complex* result, int corner_dim_x, int corner_dim_y, int corner_dim_z)
+{
+	int byte_count = 0;
+
+	auto span = corner_dim_z * 2 * sizeof(double);
+
+	int z_front = 0;
+	int z_back = params.points_z - 1 - corner_dim_z;
+
+	for (int x = 0; x < corner_dim_x; ++x)
+	{
+		for (int y = 0; y < corner_dim_y; ++y)
+		{
+			int loc1 = GetArrayLoc(x, y, z_front);
+			int loc2 = GetArrayLoc(x, y, z_back);
+			int loc3 = GetArrayLoc(x, params.points_y - 1 - y, z_front);
+			int loc4 = GetArrayLoc(x, params.points_y - 1 - y, z_back);
+			int loc5 = GetArrayLoc(params.points_x - 1 - x, y, z_front);
+			int loc6 = GetArrayLoc(params.points_x - 1 - x, y, z_back);
+			int loc7 = GetArrayLoc(params.points_x - 1 - x, params.points_y - 1 - y, z_front);
+			int loc8 = GetArrayLoc(params.points_x - 1 - x, params.points_y - 1 - y, z_back);
+
+			char* to_read1 = reinterpret_cast<char*>(&result[loc1][0]);
+			char* to_read2 = reinterpret_cast<char*>(&result[loc2][0]);
+			char* to_read3 = reinterpret_cast<char*>(&result[loc3][0]);
+			char* to_read4 = reinterpret_cast<char*>(&result[loc4][0]);
+			char* to_read5 = reinterpret_cast<char*>(&result[loc5][0]);
+			char* to_read6 = reinterpret_cast<char*>(&result[loc6][0]);
+			char* to_read7 = reinterpret_cast<char*>(&result[loc7][0]);
+			char* to_read8 = reinterpret_cast<char*>(&result[loc8][0]);
+
+			savefile.read(to_read1, span);
+			savefile.read(to_read2, span);
+			savefile.read(to_read3, span);
+			savefile.read(to_read4, span);
+			savefile.read(to_read5, span);
+			savefile.read(to_read6, span);
+			savefile.read(to_read7, span);
+			savefile.read(to_read8, span);
+		}
+	}
+
+	byte_count += 8 * corner_dim_x * corner_dim_y * span;
+
+	return byte_count;
+}
+
 
 bool MeshingVoxelGrid::ReadGridFourierFromBinary(std::ifstream& savefile)
 {
@@ -1144,3 +1358,4 @@ bool MeshingVoxelGrid::ReadGridFourierFromBinary(std::ifstream& savefile)
 
 	return false;
 }
+

@@ -313,7 +313,7 @@ std::shared_ptr<MeshingVoxelGrid> MKV_Rendering::CameraManager::GetNewVoxelGrid(
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
 		}
@@ -328,7 +328,7 @@ void MKV_Rendering::CameraManager::PackNewVoxelGrid(MeshingVoxelGrid* mvg)
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, mvg);
 		}
@@ -363,7 +363,7 @@ std::shared_ptr<open3d::geometry::PointCloud> MKV_Rendering::CameraManager::GetP
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Point Cloud", cam, &Abstract_Data::PackIntoPointCloud, &(*cloud));
 		}
@@ -390,7 +390,7 @@ std::shared_ptr<open3d::geometry::TriangleMesh> MKV_Rendering::CameraManager::Ge
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoNewVoxelGrid, &(*mvg));
 		}
@@ -421,7 +421,7 @@ open3d::geometry::VoxelGrid MKV_Rendering::CameraManager::GetOldVoxelGrid(VoxelG
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoOldVoxelGrid, &grid);
 		}
@@ -452,7 +452,7 @@ open3d::t::geometry::TSDFVoxelGrid MKV_Rendering::CameraManager::GetVoxelGrid(Vo
 	{
 		int index = cam->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			ErrorLogger::EXECUTE("Pack Frame into Voxel Grid", cam, &Abstract_Data::PackIntoVoxelGrid, &voxel_grid, data);
 		}
@@ -517,7 +517,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		int index = camera_data[i]->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			auto mat = camera_data[i]->GetExtrinsicMat();
 
@@ -561,7 +561,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 		{
 			int index = camera_data[j]->GetIndex();
 
-			if (index > 0 && camera_enabled[index])
+			if (index >= 0 && camera_enabled[index])
 			{
 				//Take the depth that is most facing the image
 				auto normal = (mesh->vertices_[mesh->triangles_[i](0)] - mesh->vertices_[mesh->triangles_[i](1)]).cross(
@@ -656,7 +656,7 @@ std::shared_ptr<open3d::geometry::Image> MKV_Rendering::CameraManager::CreateUVM
 	{
 		int index = camera_data[i]->GetIndex();
 
-		if (index > 0 && camera_enabled[index])
+		if (index >= 0 && camera_enabled[index])
 		{
 			for (auto triangle_index : camera_triangles[i])
 			{

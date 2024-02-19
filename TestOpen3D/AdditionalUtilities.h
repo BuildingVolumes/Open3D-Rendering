@@ -66,27 +66,25 @@ inline std::vector<std::string> GetFiles(const std::string& s)
     return r;
 }
 
-inline std::vector<std::string> GetFilesWithTag(const std::string& s, const std::string& tag)
+inline std::vector<std::string> GetFilesWithTag(std::vector<std::string> f, const std::string& tag)
 {
     std::vector<std::string> r;
-    for (auto& p : std::filesystem::directory_iterator(s))
-        if (p.is_regular_file())
-            if (p.path().string().rfind(tag) != std::string::npos)
-                r.push_back(p.path().string());
+    for (auto& p : f)
+        if (p.rfind(tag) != std::string::npos)
+            r.push_back(p);
     return r;
 }
 
-inline std::vector<std::string> GetFilesWithTags(const std::string& s, const std::vector<std::string>& tags)
+inline std::vector<std::string> GetFilesWithTags(std::vector<std::string> f, const std::vector<std::string>& tags)
 {
     std::vector<std::string> r;
-    for (auto& p : std::filesystem::directory_iterator(s))
-        if (p.is_regular_file())
-            for (auto& t : tags)
-                if (p.path().string().rfind(t) != std::string::npos)
-                {
-                    r.push_back(p.path().string());
-                    break;
-                }
+    for (auto& p : f)
+         for (auto& t : tags)
+             if (p.rfind(t) != std::string::npos)
+             {
+                 r.push_back(p);
+                 break;
+             }
     return r;
 }
 

@@ -413,7 +413,7 @@ open3d::camera::PinholeCameraParameters MKV_Rendering::Livescan_Data::GetParamet
 
 void MKV_Rendering::Livescan_Data::PackIntoVoxelGrid(open3d::t::geometry::TSDFVoxelGrid* grid, VoxelGridData* data)
 {
-	std::cout << "Packing frame " << index << "..." << std::endl;
+	std::cout << "Packing camera " << index << "..." << std::endl;
 
 	auto color = (*open3d::t::io::CreateImageFromFile(color_files.lower_bound(current_frame)->second));
 	auto depth = (*open3d::t::io::CreateImageFromFile(depth_files.lower_bound(current_frame)->second)).ToLegacyImage();

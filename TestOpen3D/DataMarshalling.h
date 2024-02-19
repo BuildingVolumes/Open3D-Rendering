@@ -17,5 +17,7 @@
 class DataMarshalling
 {
 public:
-	std::shared_ptr<CGAL::Surface_mesh<CGAL::Simple_cartesian<double>::Point_3>> GetOpen3DMeshAsCGAL(open3d::geometry::TriangleMesh *mesh);
+	std::shared_ptr<CGAL::Surface_mesh<CGAL::Simple_cartesian<double>::Point_3>> GetOpen3DMeshAsCGAL_SC_D_P3(open3d::geometry::TriangleMesh *mesh);
+
+	std::shared_ptr<CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>> GetOpen3DMeshAsCGAL_EPICK_P3(open3d::geometry::TriangleMesh *mesh);
 };
